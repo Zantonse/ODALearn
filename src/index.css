@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-okta-blue text-white rounded-lg hover:bg-okta-dark transition-colors;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors;
+  }
+
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700;
+  }
+
+  .input {
+    @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-okta-blue focus:border-transparent outline-none;
+  }
+}
+
+/* React Flow overrides */
+.react-flow__node {
+  @apply cursor-pointer;
+}
+
+.react-flow__node.selected {
+  @apply ring-2 ring-okta-blue;
+}
+
+/* TipTap editor styles */
+.ProseMirror {
+  @apply outline-none min-h-[200px] p-4;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  @apply text-gray-400 float-left h-0 pointer-events-none;
+  content: attr(data-placeholder);
+}
