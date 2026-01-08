@@ -21,6 +21,20 @@ export type ArticleCategory =
   | 'troubleshooting'
   | 'integration'
   | 'policies'
+  | 'discovery'
+  | 'business-value'
+  | 'demo'
+  | 'poc'
+  | 'objection-handling'
+  | 'use-cases'
+  | 'competitive'
+  | 'architecture'
+  | 'labs'
+  | 'reference'
+  | 'quick-reference'
+  | 'sales-tools'
+  | 'implementation'
+  | 'security'
   | 'other';
 
 export const CATEGORY_LABELS: Record<ArticleCategory, string> = {
@@ -31,6 +45,20 @@ export const CATEGORY_LABELS: Record<ArticleCategory, string> = {
   troubleshooting: 'Troubleshooting',
   integration: 'Integrations',
   policies: 'Policies',
+  discovery: 'Discovery & Qualification',
+  'business-value': 'Business Value & ROI',
+  demo: 'Demo Guides',
+  poc: 'POC & Pilots',
+  'objection-handling': 'Objection Handling',
+  'use-cases': 'Use Cases',
+  competitive: 'Competitive Intelligence',
+  architecture: 'Architecture & Design',
+  labs: 'Hands-On Labs',
+  reference: 'Reference Architectures',
+  'quick-reference': 'Quick Reference',
+  'sales-tools': 'Sales Tools',
+  implementation: 'Implementation',
+  security: 'Security',
   other: 'Other',
 };
 
