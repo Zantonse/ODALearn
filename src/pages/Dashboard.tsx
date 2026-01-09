@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useContentStore } from '../store/contentStore';
 import { BookOpen, CheckCircle, Brain, TrendingUp } from 'lucide-react';
 

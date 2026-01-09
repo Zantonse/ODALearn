@@ -7096,6 +7096,5728 @@ sfltool dumpbtm</code></pre>
     isRead: false,
     isStarter: true,
   },
+  {
+    id: 'se-integration-patterns',
+    title: 'Integration Patterns and Architecture for Okta Device Access',
+    content: `
+      <h2>Overview</h2>
+      <p>This guide covers integration patterns and architectural considerations for deploying Okta Device Access in complex enterprise environments.</p>
+
+      <h2>Active Directory Integration Patterns</h2>
+
+      <h3>Single Forest Architecture</h3>
+      <p>The simplest AD integration pattern for Okta Device Access.</p>
+      <ul>
+        <li><strong>Components:</strong> Single AD forest, Okta AD agent, password writeback</li>
+        <li><strong>User flow:</strong> Users authenticate to Okta, password syncs to AD, device auth uses synced credentials</li>
+        <li><strong>Best for:</strong> Single-domain organizations, simple AD structures</li>
+        <li><strong>Considerations:</strong> Ensure AD agent has write permissions, configure password policies</li>
+      </ul>
+
+      <h3>Multi-Forest Architecture</h3>
+      <p>Handling multiple AD forests with different trust relationships.</p>
+      <ul>
+        <li><strong>Forest trusts:</strong> Configure Okta AD agents in each forest</li>
+        <li><strong>User matching:</strong> Use UPN or email for cross-forest user resolution</li>
+        <li><strong>Password sync:</strong> Each forest requires separate writeback configuration</li>
+        <li><strong>Policy considerations:</strong> Different policies per forest if needed</li>
+        <li><strong>Best practices:</strong> Test cross-forest authentication flows thoroughly</li>
+      </ul>
+
+      <h3>Azure AD Hybrid Architecture</h3>
+      <p>Combining on-prem AD with Azure AD (Entra ID).</p>
+      <ul>
+        <li><strong>Azure AD Connect:</strong> Syncs identities between on-prem and cloud</li>
+        <li><strong>Password hash sync:</strong> Options for password sync vs pass-through auth</li>
+        <li><strong>Okta integration:</strong> Can federate with Azure AD or sync directly from AD</li>
+        <li><strong>Device join:</strong> Consider Azure AD join vs hybrid join scenarios</li>
+        <li><strong>Recommendation:</strong> Okta as primary IdP, sync to both AD and Azure AD</li>
+      </ul>
+
+      <h3>No Active Directory (Cloud-Only)</h3>
+      <p>Modern approach without traditional AD dependency.</p>
+      <ul>
+        <li><strong>Okta as source of truth:</strong> User identities mastered in Okta</li>
+        <li><strong>Local account mapping:</strong> JIT account creation for macOS</li>
+        <li><strong>Windows considerations:</strong> Azure AD join or local accounts</li>
+        <li><strong>Benefits:</strong> Simplified architecture, cloud-native approach</li>
+        <li><strong>Migration path:</strong> Gradual reduction of AD dependency</li>
+      </ul>
+
+      <h2>Network Architecture Patterns</h2>
+
+      <h3>Standard Corporate Network</h3>
+      <p>Traditional on-premise network with internet access.</p>
+      <ul>
+        <li><strong>Firewall rules:</strong> Allow outbound HTTPS to *.okta.com, *.oktacdn.com</li>
+        <li><strong>Proxy configuration:</strong> Configure Okta Verify to use corporate proxy</li>
+        <li><strong>DNS:</strong> Ensure proper resolution of Okta endpoints</li>
+        <li><strong>Certificate trust:</strong> Trust Okta CA certificates if using SSL inspection</li>
+      </ul>
+
+      <h3>Split-Tunnel VPN Architecture</h3>
+      <p>VPN with selective traffic routing.</p>
+      <ul>
+        <li><strong>Okta traffic:</strong> Route Okta endpoints through direct internet, not VPN tunnel</li>
+        <li><strong>Benefits:</strong> Reduced VPN bandwidth, faster authentication</li>
+        <li><strong>Configuration:</strong> Add Okta domains to VPN split-tunnel exclusions</li>
+        <li><strong>Security:</strong> Ensures device authentication works before VPN connects</li>
+      </ul>
+
+      <h3>Full-Tunnel VPN with Device Access</h3>
+      <p>All traffic routes through VPN, including Okta.</p>
+      <ul>
+        <li><strong>Challenge:</strong> Need device auth before VPN connects</li>
+        <li><strong>Solution:</strong> Configure offline authentication with grace periods</li>
+        <li><strong>Alternative:</strong> Use split-tunnel for Okta endpoints only</li>
+        <li><strong>Offline factors:</strong> Enable TOTP or offline PIN for connectivity loss</li>
+      </ul>
+
+      <h3>Multi-Region Global Deployment</h3>
+      <p>Distributed workforce across multiple geographic regions.</p>
+      <ul>
+        <li><strong>Okta cells:</strong> Use Okta's global infrastructure for low latency</li>
+        <li><strong>Data residency:</strong> Consider EMEA, APAC, or US-based Okta orgs if required</li>
+        <li><strong>MDM distribution:</strong> Deploy MDM servers regionally if possible</li>
+        <li><strong>Network paths:</strong> Optimize routes to nearest Okta POP</li>
+        <li><strong>Offline support:</strong> Critical for users traveling between regions</li>
+      </ul>
+
+      <h2>Okta Workflows Integration</h2>
+
+      <h3>Automated Device Provisioning</h3>
+      <p>Use Workflows to automate device onboarding.</p>
+      <ul>
+        <li><strong>Trigger:</strong> New device registration in Okta</li>
+        <li><strong>Actions:</strong> Create ServiceNow ticket, send welcome email, add to groups</li>
+        <li><strong>Use case:</strong> Track new device activations, automate provisioning tasks</li>
+      </ul>
+
+      <h3>Password Sync Notifications</h3>
+      <p>Alert users when password sync events occur.</p>
+      <ul>
+        <li><strong>Trigger:</strong> Password change detected</li>
+        <li><strong>Actions:</strong> Send Slack/email notification, log to SIEM</li>
+        <li><strong>Use case:</strong> Security monitoring, user communication</li>
+      </ul>
+
+      <h3>Device Compliance Automation</h3>
+      <p>Enforce device compliance with automated workflows.</p>
+      <ul>
+        <li><strong>Trigger:</strong> Device fails compliance check</li>
+        <li><strong>Actions:</strong> Remove from privileged groups, alert IT, create ticket</li>
+        <li><strong>Use case:</strong> Automated security posture management</li>
+      </ul>
+
+      <h2>API Integration Patterns</h2>
+
+      <h3>Device Registration API</h3>
+      <p>Programmatically manage device registrations.</p>
+      <pre><code>GET /api/v1/devices
+POST /api/v1/devices/{deviceId}/lifecycle/activate
+DELETE /api/v1/devices/{deviceId}</code></pre>
+      <ul>
+        <li><strong>Use cases:</strong> Custom device inventory, bulk device management</li>
+        <li><strong>Authentication:</strong> API token with device management permissions</li>
+      </ul>
+
+      <h3>Authentication Policy API</h3>
+      <p>Manage device authentication policies programmatically.</p>
+      <pre><code>GET /api/v1/policies
+PUT /api/v1/policies/{policyId}
+POST /api/v1/policies/{policyId}/rules</code></pre>
+      <ul>
+        <li><strong>Use cases:</strong> Dynamic policy updates, compliance enforcement</li>
+        <li><strong>Automation:</strong> Change policies based on threat intelligence</li>
+      </ul>
+
+      <h3>Event Hooks for Device Events</h3>
+      <p>Real-time notifications for device authentication events.</p>
+      <ul>
+        <li><strong>Events:</strong> device.enrollment, device.authentication, device.deactivation</li>
+        <li><strong>Webhook endpoint:</strong> Send events to SIEM, logging platform</li>
+        <li><strong>Use cases:</strong> Security monitoring, compliance reporting</li>
+      </ul>
+
+      <h2>High Availability Architecture</h2>
+
+      <h3>Okta Service Availability</h3>
+      <ul>
+        <li><strong>SLA:</strong> 99.99% uptime guarantee</li>
+        <li><strong>Redundancy:</strong> Multi-region redundant infrastructure</li>
+        <li><strong>Failover:</strong> Automatic failover between availability zones</li>
+        <li><strong>Status:</strong> Monitor at trust.okta.com</li>
+      </ul>
+
+      <h3>On-Premise Component HA</h3>
+      <ul>
+        <li><strong>AD Agents:</strong> Deploy multiple agents for redundancy</li>
+        <li><strong>Load balancing:</strong> Agents automatically load balance</li>
+        <li><strong>Health monitoring:</strong> Monitor agent health in Okta admin console</li>
+      </ul>
+
+      <h3>MDM High Availability</h3>
+      <ul>
+        <li><strong>Jamf Pro:</strong> Clustered deployment with load balancer</li>
+        <li><strong>Intune:</strong> Microsoft-managed, globally redundant</li>
+        <li><strong>Kandji:</strong> Cloud-hosted with built-in redundancy</li>
+      </ul>
+
+      <h2>Disaster Recovery Patterns</h2>
+
+      <h3>Offline Access During Outages</h3>
+      <ul>
+        <li><strong>Cached credentials:</strong> Users can sign in during Okta outage</li>
+        <li><strong>Grace periods:</strong> Configure appropriate offline windows</li>
+        <li><strong>Offline factors:</strong> TOTP continues to work without connectivity</li>
+        <li><strong>Recovery:</strong> Automatic sync when service restored</li>
+      </ul>
+
+      <h3>Backup Authentication Methods</h3>
+      <ul>
+        <li><strong>Local admin accounts:</strong> Maintain break-glass accounts</li>
+        <li><strong>Recovery PINs:</strong> Generate before extended travel</li>
+        <li><strong>Multiple factors:</strong> Enroll backup factors for redundancy</li>
+      </ul>
+
+      <h3>Data Backup and Recovery</h3>
+      <ul>
+        <li><strong>Okta config:</strong> Use Terraform or API to backup policies</li>
+        <li><strong>User data:</strong> Regular exports of user and device data</li>
+        <li><strong>MDM profiles:</strong> Version control configuration profiles</li>
+      </ul>
+
+      <h2>Security Architecture Patterns</h2>
+
+      <h3>Zero Trust Architecture Integration</h3>
+      <ul>
+        <li><strong>Device trust:</strong> Okta Device Access provides device identity</li>
+        <li><strong>Conditional access:</strong> Use device signals in access policies</li>
+        <li><strong>Continuous verification:</strong> Re-authenticate at device and app level</li>
+        <li><strong>Least privilege:</strong> Grant access based on device+user+context</li>
+      </ul>
+
+      <h3>Defense in Depth</h3>
+      <ul>
+        <li><strong>Layer 1:</strong> Device-level MFA (Okta Device Access)</li>
+        <li><strong>Layer 2:</strong> Network access controls (VPN, firewall)</li>
+        <li><strong>Layer 3:</strong> Application-level MFA (Okta SSO)</li>
+        <li><strong>Layer 4:</strong> Data encryption (FileVault, BitLocker)</li>
+        <li><strong>Layer 5:</strong> Monitoring and detection (SIEM, EDR)</li>
+      </ul>
+
+      <h3>Compliance Architecture</h3>
+      <ul>
+        <li><strong>Audit logging:</strong> All device auth events to Okta System Log</li>
+        <li><strong>SIEM integration:</strong> Forward logs to Splunk, Azure Sentinel, etc.</li>
+        <li><strong>Retention:</strong> Configure log retention per compliance requirements</li>
+        <li><strong>Reporting:</strong> Build compliance dashboards from Okta data</li>
+      </ul>
+
+      <h2>Best Practices</h2>
+
+      <h3>Architecture Planning</h3>
+      <ul>
+        <li>Document current state before designing future state</li>
+        <li>Consider scalability and growth in design</li>
+        <li>Plan for failure scenarios and disaster recovery</li>
+        <li>Involve security, networking, and identity teams early</li>
+      </ul>
+
+      <h3>Integration Sequencing</h3>
+      <ol>
+        <li>Set up identity source integration (AD, Azure AD)</li>
+        <li>Configure MDM and enroll test devices</li>
+        <li>Deploy Okta Verify to test devices</li>
+        <li>Configure and test Desktop MFA policies</li>
+        <li>Configure and test Platform SSO (macOS)</li>
+        <li>Validate authentication flows end-to-end</li>
+        <li>Test failure scenarios and offline access</li>
+        <li>Deploy to pilot group</li>
+      </ol>
+
+      <h3>Performance Optimization</h3>
+      <ul>
+        <li>Use split-tunnel VPN for Okta traffic</li>
+        <li>Deploy AD agents close to domain controllers</li>
+        <li>Configure appropriate offline grace periods</li>
+        <li>Monitor authentication latency in Okta logs</li>
+        <li>Optimize network paths to Okta endpoints</li>
+      </ul>
+    `,
+    summary: 'Comprehensive integration patterns and architecture guide covering Active Directory integration (single/multi-forest, hybrid, cloud-only), network architectures (VPN, multi-region, HA/DR), Okta Workflows automation, API integrations, security patterns, and best practices for Okta Device Access.',
+    category: 'architecture',
+    tags: ['integration', 'architecture', 'active directory', 'azure ad', 'network', 'workflows', 'api', 'high availability', 'disaster recovery', 'zero trust'],
+    source: 'internal',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isRead: false,
+    isStarter: true,
+  },
+  {
+    id: 'se-hands-on-labs',
+    title: 'Hands-On Labs for Okta Device Access',
+    category: 'labs',
+    content: `
+      <h1>Hands-On Labs for Okta Device Access</h1>
+
+      <div class="info-box">
+        <h3>About These Labs</h3>
+        <p>These hands-on labs provide practical experience with Okta Device Access features. Each lab includes learning objectives, prerequisites, step-by-step instructions, and validation procedures. Complete these labs in sequence for the best learning experience.</p>
+      </div>
+
+      <h2>Sandbox Environment Setup</h2>
+
+      <h3>Required Components</h3>
+
+      <h4>1. Okta Trial Organization</h4>
+      <ul>
+        <li><strong>Sign up:</strong> Visit <code>developer.okta.com</code> and create a free developer account</li>
+        <li><strong>Required licenses:</strong> Ensure Okta Identity Governance (OIG) and Okta Verify are enabled</li>
+        <li><strong>Admin access:</strong> You'll need Super Administrator privileges</li>
+        <li><strong>Domain:</strong> Note your Okta domain (e.g., <code>dev-123456.okta.com</code>)</li>
+      </ul>
+
+      <h4>2. Test Devices</h4>
+      <ul>
+        <li><strong>macOS:</strong> macOS 13+ (Ventura or later) for Platform SSO support</li>
+        <li><strong>Windows:</strong> Windows 10/11 Professional or Enterprise edition</li>
+        <li><strong>Virtual machines:</strong> Can use VMware Fusion, Parallels, or VirtualBox</li>
+        <li><strong>Clean state:</strong> Fresh OS installs recommended to avoid conflicts</li>
+      </ul>
+
+      <h4>3. MDM Trial Accounts</h4>
+      <ul>
+        <li><strong>Jamf Pro:</strong> Sign up for Jamf Now trial at <code>jamf.com/products/jamf-now/</code></li>
+        <li><strong>Microsoft Intune:</strong> Get trial through Microsoft 365 Business Premium trial</li>
+        <li><strong>Alternative:</strong> Use Kandji or Workspace ONE free trials</li>
+        <li><strong>Device enrollment:</strong> Enroll test devices in your chosen MDM</li>
+      </ul>
+
+      <h4>4. Sample Users</h4>
+      <ul>
+        <li><strong>Test users:</strong> Create 3-5 test users in Okta (e.g., <code>testuser1@yourdomain.com</code>)</li>
+        <li><strong>Groups:</strong> Create groups for phased rollout testing</li>
+        <li><strong>Credentials:</strong> Document usernames and passwords securely</li>
+        <li><strong>Mobile devices:</strong> Each test user needs a mobile device for Okta Verify enrollment</li>
+      </ul>
+
+      <h3>Environment Preparation Checklist</h3>
+      <div class="checklist">
+        <ul>
+          <li>☐ Okta org created and accessible</li>
+          <li>☐ Okta Verify license enabled in org</li>
+          <li>☐ Test macOS device available (physical or VM)</li>
+          <li>☐ Test Windows device available (physical or VM)</li>
+          <li>☐ MDM solution selected and trial activated</li>
+          <li>☐ Test devices enrolled in MDM</li>
+          <li>☐ 3+ test users created in Okta</li>
+          <li>☐ Test users have mobile devices for Okta Verify</li>
+          <li>☐ Network connectivity confirmed (devices can reach Okta)</li>
+          <li>☐ Admin credentials documented securely</li>
+        </ul>
+      </div>
+
+      <h2>Lab 1: Configure Desktop MFA in Jamf Pro</h2>
+
+      <div class="lab-header">
+        <p><strong>Estimated Time:</strong> 45 minutes</p>
+        <p><strong>Difficulty:</strong> Beginner</p>
+        <p><strong>Platform:</strong> macOS with Jamf Pro</p>
+      </div>
+
+      <h3>Learning Objectives</h3>
+      <ul>
+        <li>Create and deploy a Desktop MFA configuration profile in Jamf Pro</li>
+        <li>Configure Okta Verify settings for macOS endpoints</li>
+        <li>Test Desktop MFA authentication flow</li>
+        <li>Validate successful deployment and functionality</li>
+      </ul>
+
+      <h3>Prerequisites</h3>
+      <ul>
+        <li>Completed sandbox environment setup</li>
+        <li>macOS device enrolled in Jamf Pro</li>
+        <li>Jamf Pro administrator access</li>
+        <li>Okta administrator access</li>
+        <li>Test user with Okta Verify enrolled on mobile device</li>
+      </ul>
+
+      <h3>Materials Needed</h3>
+      <ul>
+        <li>Okta domain URL</li>
+        <li>Jamf Pro admin console access</li>
+        <li>macOS test device (physical or VM)</li>
+        <li>Mobile device with Okta Verify installed</li>
+        <li>Test user credentials</li>
+      </ul>
+
+      <h3>Step-by-Step Instructions</h3>
+
+      <h4>Part 1: Configure Okta</h4>
+
+      <div class="step">
+        <strong>Step 1.1:</strong> Enable Desktop MFA in Okta
+        <ul>
+          <li>Log into Okta Admin Console as Super Admin</li>
+          <li>Navigate to <strong>Security → Authenticators</strong></li>
+          <li>Click <strong>Okta Verify</strong></li>
+          <li>Click <strong>Edit</strong> on the configuration</li>
+          <li>Ensure <strong>Desktop authentication</strong> is enabled</li>
+          <li>Click <strong>Save</strong></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 1.2:</strong> Create Authentication Policy
+        <ul>
+          <li>Navigate to <strong>Security → Authentication Policies</strong></li>
+          <li>Click <strong>Add a Policy</strong></li>
+          <li>Name: "Desktop MFA Policy"</li>
+          <li>Assign to: Select your test user group</li>
+          <li>Add rule requiring Okta Verify for desktop authentication</li>
+          <li>Click <strong>Create Policy</strong></li>
+        </ul>
+      </div>
+
+      <h4>Part 2: Create Configuration Profile in Jamf</h4>
+
+      <div class="step">
+        <strong>Step 2.1:</strong> Access Jamf Pro Configuration Profiles
+        <ul>
+          <li>Log into Jamf Pro admin console</li>
+          <li>Navigate to <strong>Computers → Configuration Profiles</strong></li>
+          <li>Click <strong>+ New</strong></li>
+          <li>Name: "Okta Desktop MFA Configuration"</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.2:</strong> Add Custom Settings Payload
+        <ul>
+          <li>Click <strong>Application & Custom Settings</strong></li>
+          <li>Click <strong>Configure</strong></li>
+          <li>Preference Domain: <code>com.okta.OktaVerify</code></li>
+          <li>Click <strong>Add</strong> to upload plist or configure manually</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.3:</strong> Configure Desktop MFA Settings
+        <p>Add the following key-value pairs:</p>
+        <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+    &lt;key&gt;OrgUrl&lt;/key&gt;
+    &lt;string&gt;https://your-domain.okta.com&lt;/string&gt;
+    &lt;key&gt;EnableDesktopAuth&lt;/key&gt;
+    &lt;true/&gt;
+    &lt;key&gt;EnabledFactors&lt;/key&gt;
+    &lt;array&gt;
+        &lt;string&gt;push&lt;/string&gt;
+        &lt;string&gt;totp&lt;/string&gt;
+    &lt;/array&gt;
+    &lt;key&gt;GracePeriodMinutes&lt;/key&gt;
+    &lt;integer&gt;60&lt;/integer&gt;
+    &lt;key&gt;EnablePasswordSync&lt;/key&gt;
+    &lt;false/&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;</code></pre>
+        <p><strong>Note:</strong> Replace <code>your-domain.okta.com</code> with your actual Okta domain</p>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.4:</strong> Configure Scope
+        <ul>
+          <li>Click <strong>Scope</strong> tab</li>
+          <li>Under <strong>Computers</strong>, add your test device or test device group</li>
+          <li>Click <strong>Save</strong></li>
+        </ul>
+      </div>
+
+      <h4>Part 3: Deploy and Test</h4>
+
+      <div class="step">
+        <strong>Step 3.1:</strong> Verify Profile Installation
+        <ul>
+          <li>On the test Mac, open <strong>Terminal</strong></li>
+          <li>Run: <code>sudo profiles -L</code></li>
+          <li>Verify "Okta Desktop MFA Configuration" appears in the list</li>
+          <li>Run: <code>sudo profiles show</code> to view full profile details</li>
+          <li>Confirm OrgUrl and other settings are correct</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.2:</strong> Install Okta Verify
+        <ul>
+          <li>Download Okta Verify for macOS from Okta Downloads page</li>
+          <li>Install the application</li>
+          <li>Launch Okta Verify</li>
+          <li>It should auto-detect the org URL from the profile</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.3:</strong> Enroll Device
+        <ul>
+          <li>In Okta Verify, click <strong>Add Account</strong></li>
+          <li>Sign in with test user credentials</li>
+          <li>Approve the push notification on the mobile device</li>
+          <li>Complete biometric setup if prompted</li>
+          <li>Verify device appears as enrolled in Okta Verify</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.4:</strong> Test Desktop MFA
+        <ul>
+          <li>Lock the Mac (Cmd+Ctrl+Q)</li>
+          <li>At login screen, enter test user's local username</li>
+          <li>Enter the local password</li>
+          <li>Observe Okta Verify challenge (push or TOTP)</li>
+          <li>Approve the push notification or enter TOTP code</li>
+          <li>Verify successful login to macOS</li>
+        </ul>
+      </div>
+
+      <h3>Expected Outcomes</h3>
+      <ul>
+        <li>Configuration profile successfully deployed to test Mac</li>
+        <li>Okta Verify installed and device enrolled</li>
+        <li>Desktop MFA challenge appears at macOS login</li>
+        <li>User can authenticate with push or TOTP</li>
+        <li>Successful login after MFA approval</li>
+      </ul>
+
+      <h3>Validation Steps</h3>
+
+      <div class="validation">
+        <h4>1. Verify Profile Installation</h4>
+        <pre><code>sudo profiles -L | grep -i okta</code></pre>
+        <p><strong>Expected:</strong> Profile name appears in output</p>
+
+        <h4>2. Check Okta Verify Status</h4>
+        <pre><code>defaults read com.okta.OktaVerify</code></pre>
+        <p><strong>Expected:</strong> Configuration keys visible with correct values</p>
+
+        <h4>3. View Okta Verify Logs</h4>
+        <pre><code>log show --predicate 'subsystem == "com.okta.OktaVerify"' --last 5m</code></pre>
+        <p><strong>Expected:</strong> No error messages; enrollment successful</p>
+
+        <h4>4. Confirm in Okta Admin Console</h4>
+        <ul>
+          <li>Navigate to <strong>Directory → People</strong></li>
+          <li>Find test user and click their name</li>
+          <li>Click <strong>Okta Verify</strong> tab</li>
+          <li>Verify macOS device is listed and enrolled</li>
+        </ul>
+      </div>
+
+      <h3>Common Issues and Troubleshooting</h3>
+
+      <div class="troubleshooting">
+        <h4>Issue: Profile Not Installing</h4>
+        <p><strong>Symptoms:</strong> Profile doesn't appear on device after deployment</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Device not checking in with Jamf</li>
+          <li>Scope not configured correctly</li>
+          <li>MDM enrollment issues</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Force device check-in: <code>sudo jamf policy</code></li>
+          <li>Verify device is in the profile's scope in Jamf</li>
+          <li>Check MDM enrollment: <code>sudo profiles status</code></li>
+          <li>Review Jamf policy logs in Jamf Pro</li>
+        </ul>
+
+        <h4>Issue: Okta Verify Not Detecting Org</h4>
+        <p><strong>Symptoms:</strong> Okta Verify prompts for manual org URL entry</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>OrgUrl key missing or incorrect in profile</li>
+          <li>Profile not applied before Okta Verify launch</li>
+          <li>Case sensitivity in domain name</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Verify OrgUrl in profile: <code>defaults read com.okta.OktaVerify OrgUrl</code></li>
+          <li>Quit and relaunch Okta Verify</li>
+          <li>Ensure OrgUrl includes https:// and correct domain</li>
+          <li>Reinstall profile if necessary</li>
+        </ul>
+
+        <h4>Issue: Desktop MFA Not Triggering</h4>
+        <p><strong>Symptoms:</strong> Login succeeds with just password, no MFA challenge</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Desktop authentication not enabled in Okta</li>
+          <li>User within grace period</li>
+          <li>Authentication policy not applied to user</li>
+          <li>EnableDesktopAuth set to false</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Verify EnableDesktopAuth is true in profile</li>
+          <li>Check authentication policy in Okta admin console</li>
+          <li>Wait for grace period to expire or set to 0 for testing</li>
+          <li>Verify user is in correct group for policy</li>
+          <li>Check Okta Verify logs for errors</li>
+        </ul>
+
+        <h4>Issue: Push Notifications Not Received</h4>
+        <p><strong>Symptoms:</strong> Desktop MFA challenge appears but no push on mobile</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Mobile device offline</li>
+          <li>Push notifications disabled in mobile Okta Verify</li>
+          <li>Network connectivity issues</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Verify mobile device has network connectivity</li>
+          <li>Check push notification settings on mobile device</li>
+          <li>Use TOTP as alternative factor</li>
+          <li>Re-enroll Okta Verify on mobile device</li>
+        </ul>
+      </div>
+
+      <h2>Lab 2: Set Up Platform SSO for macOS</h2>
+
+      <div class="lab-header">
+        <p><strong>Estimated Time:</strong> 60 minutes</p>
+        <p><strong>Difficulty:</strong> Intermediate</p>
+        <p><strong>Platform:</strong> macOS 13+ with Jamf Pro or Intune</p>
+      </div>
+
+      <h3>Learning Objectives</h3>
+      <ul>
+        <li>Understand Platform SSO architecture and benefits</li>
+        <li>Configure an Extensible SSO profile for Okta</li>
+        <li>Deploy Platform SSO configuration to macOS devices</li>
+        <li>Test user enrollment and SSO experience</li>
+        <li>Validate Secure Enclave key storage</li>
+      </ul>
+
+      <h3>Prerequisites</h3>
+      <ul>
+        <li>macOS 13 (Ventura) or later</li>
+        <li>Okta org with Okta Verify and OIE enabled</li>
+        <li>MDM solution (Jamf Pro or Intune)</li>
+        <li>Understanding of SSO and public key cryptography basics</li>
+        <li>Test user with admin rights on test Mac</li>
+      </ul>
+
+      <h3>Materials Needed</h3>
+      <ul>
+        <li>Okta domain URL</li>
+        <li>Okta Verify Team ID: <code>4WE73L84WQ</code></li>
+        <li>Extension Identifier: <code>com.okta.OktaVerify.OktaVerifyPlatformSSO</code></li>
+        <li>MDM admin console access</li>
+        <li>macOS test device (physical or VM)</li>
+      </ul>
+
+      <h3>Step-by-Step Instructions</h3>
+
+      <h4>Part 1: Configure Platform SSO Profile</h4>
+
+      <div class="step">
+        <strong>Step 1.1:</strong> Create Extensible SSO Profile in Jamf
+        <ul>
+          <li>Log into Jamf Pro</li>
+          <li>Navigate to <strong>Computers → Configuration Profiles</strong></li>
+          <li>Click <strong>+ New</strong></li>
+          <li>Name: "Okta Platform SSO"</li>
+          <li>Select <strong>Extensible Single Sign On (SSO)</strong> from the left sidebar</li>
+          <li>Click <strong>Configure</strong></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 1.2:</strong> Configure SSO Extension Settings
+        <p>Enter the following values:</p>
+        <ul>
+          <li><strong>Payload Type:</strong> Redirect</li>
+          <li><strong>Extension Identifier:</strong> <code>com.okta.OktaVerify.OktaVerifyPlatformSSO</code></li>
+          <li><strong>Team Identifier:</strong> <code>4WE73L84WQ</code></li>
+          <li><strong>Sign-In Frequency:</strong> 0 (always challenge at login)</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 1.3:</strong> Add URLs Configuration
+        <p>Under <strong>URLs</strong>, add the following:</p>
+        <ul>
+          <li><code>https://your-domain.okta.com</code></li>
+          <li><code>https://your-domain.okta-emea.com</code> (if applicable)</li>
+          <li><code>https://your-domain.okta.com.au</code> (if applicable)</li>
+        </ul>
+        <p><strong>Note:</strong> Add all Okta domains your organization uses</p>
+      </div>
+
+      <div class="step">
+        <strong>Step 1.4:</strong> Configure Extension Data
+        <p>Add custom configuration keys under <strong>Extension Data</strong>:</p>
+        <ul>
+          <li><strong>Key:</strong> <code>oktaURL</code>, <strong>Value:</strong> <code>https://your-domain.okta.com</code></li>
+          <li><strong>Key:</strong> <code>registrationMode</code>, <strong>Value:</strong> <code>userInitiated</code></li>
+          <li><strong>Key:</strong> <code>enableSecureEnclaveKeys</code>, <strong>Value:</strong> <code>true</code></li>
+          <li><strong>Key:</strong> <code>accountDisplayName</code>, <strong>Value:</strong> <code>Okta SSO Account</code></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 1.5:</strong> Set Profile Scope
+        <ul>
+          <li>Click <strong>Scope</strong> tab</li>
+          <li>Add test devices or pilot group</li>
+          <li>Click <strong>Save</strong></li>
+        </ul>
+      </div>
+
+      <h4>Part 2: Deploy Okta Verify</h4>
+
+      <div class="step">
+        <strong>Step 2.1:</strong> Package Okta Verify for Deployment
+        <ul>
+          <li>Download latest Okta Verify PKG from Okta Downloads</li>
+          <li>In Jamf Pro, go to <strong>Computer Management → Packages</strong></li>
+          <li>Click <strong>+ New</strong></li>
+          <li>Upload the Okta Verify PKG file</li>
+          <li>Name: "Okta Verify"</li>
+          <li>Category: "Security"</li>
+          <li>Click <strong>Save</strong></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.2:</strong> Create Installation Policy
+        <ul>
+          <li>Go to <strong>Computers → Policies</strong></li>
+          <li>Click <strong>+ New</strong></li>
+          <li>Name: "Install Okta Verify"</li>
+          <li>Under <strong>Packages</strong>, add the Okta Verify package</li>
+          <li>Set trigger: "Recurring Check-In" or "Enrollment Complete"</li>
+          <li>Set frequency: "Once per computer"</li>
+          <li>Scope to test devices</li>
+          <li>Click <strong>Save</strong></li>
+        </ul>
+      </div>
+
+      <h4>Part 3: User Enrollment</h4>
+
+      <div class="step">
+        <strong>Step 3.1:</strong> Verify Profile and App Installation
+        <ul>
+          <li>On test Mac, open Terminal</li>
+          <li>Check profile: <code>sudo profiles -L | grep -i sso</code></li>
+          <li>Verify Okta Verify installed: <code>ls /Applications | grep Okta</code></li>
+          <li>Check SSO extension: <code>app-sso platform -s</code></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.2:</strong> Initiate Platform SSO Registration
+        <ul>
+          <li>Launch Okta Verify application</li>
+          <li>Click <strong>Add Account</strong></li>
+          <li>Select <strong>Work Account (SSO)</strong></li>
+          <li>App will detect Platform SSO configuration</li>
+          <li>Click <strong>Continue</strong></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.3:</strong> Complete Registration Flow
+        <ul>
+          <li>Enter Okta credentials when prompted</li>
+          <li>Complete MFA challenge (if required by policy)</li>
+          <li>Grant permission for Okta Verify to use SSO extension</li>
+          <li>Complete biometric setup for Okta Verify</li>
+          <li>Confirm "Registration Successful" message</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.4:</strong> Test macOS Login with Platform SSO
+        <ul>
+          <li>Log out of macOS (Shift+Cmd+Q)</li>
+          <li>At login screen, select test user</li>
+          <li>Enter Okta password (not local password)</li>
+          <li>Observe SSO authentication flow</li>
+          <li>Complete any MFA challenges</li>
+          <li>Verify successful login</li>
+        </ul>
+      </div>
+
+      <h3>Expected Outcomes</h3>
+      <ul>
+        <li>Platform SSO profile successfully deployed</li>
+        <li>Okta Verify installed on test Mac</li>
+        <li>User successfully enrolled in Platform SSO</li>
+        <li>User can log into macOS with Okta credentials</li>
+        <li>Private key stored in Secure Enclave</li>
+        <li>SSO works for Okta-integrated apps</li>
+      </ul>
+
+      <h3>Validation Steps</h3>
+
+      <div class="validation">
+        <h4>1. Verify SSO Extension Registration</h4>
+        <pre><code>app-sso platform -s</code></pre>
+        <p><strong>Expected:</strong> Shows "Registered" status with Okta account</p>
+
+        <h4>2. Check Secure Enclave Key</h4>
+        <pre><code>app-sso platform -l</code></pre>
+        <p><strong>Expected:</strong> Lists SSO keys stored in Secure Enclave</p>
+
+        <h4>3. View Platform SSO Logs</h4>
+        <pre><code>log show --predicate 'subsystem == "com.apple.AppSSO"' --last 10m</code></pre>
+        <p><strong>Expected:</strong> Shows successful authentication events</p>
+
+        <h4>4. Test SSO to Okta Dashboard</h4>
+        <ul>
+          <li>Open Safari (or default browser)</li>
+          <li>Navigate to your Okta dashboard URL</li>
+          <li>Should automatically sign in without credentials prompt</li>
+          <li>Verify user is logged in</li>
+        </ul>
+
+        <h4>5. Confirm in Okta Admin Console</h4>
+        <ul>
+          <li>Log into Okta Admin Console</li>
+          <li>Navigate to <strong>Reports → System Log</strong></li>
+          <li>Filter for user's authentication events</li>
+          <li>Verify "user.authentication.auth_via_mfa" with Platform SSO</li>
+        </ul>
+      </div>
+
+      <h3>Common Issues and Troubleshooting</h3>
+
+      <div class="troubleshooting">
+        <h4>Issue: SSO Extension Not Loading</h4>
+        <p><strong>Symptoms:</strong> <code>app-sso platform -s</code> shows "Not Registered"</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Profile not installed correctly</li>
+          <li>Incorrect Extension Identifier or Team ID</li>
+          <li>macOS version too old (needs 13+)</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Verify profile: <code>sudo profiles show | grep -A 20 "Extensible"</code></li>
+          <li>Confirm Extension Identifier: <code>com.okta.OktaVerify.OktaVerifyPlatformSSO</code></li>
+          <li>Confirm Team ID: <code>4WE73L84WQ</code></li>
+          <li>Reinstall profile if incorrect</li>
+          <li>Verify macOS version: <code>sw_vers</code></li>
+        </ul>
+
+        <h4>Issue: Registration Fails with Error</h4>
+        <p><strong>Symptoms:</strong> Error message during Okta Verify registration</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Network connectivity issues</li>
+          <li>Incorrect Okta URL in configuration</li>
+          <li>Okta Verify version outdated</li>
+          <li>User doesn't have permission for Platform SSO in Okta</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Check network: <code>ping your-domain.okta.com</code></li>
+          <li>Verify oktaURL in profile extension data</li>
+          <li>Update Okta Verify to latest version</li>
+          <li>Check Okta authentication policy allows Platform SSO</li>
+          <li>Review Okta Verify logs: <code>log show --predicate 'subsystem == "com.okta.OktaVerify"' --last 5m</code></li>
+        </ul>
+
+        <h4>Issue: Can't Login with Okta Password</h4>
+        <p><strong>Symptoms:</strong> macOS login screen doesn't accept Okta password</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Platform SSO not fully registered</li>
+          <li>User account not linked</li>
+          <li>SSO extension disabled</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Login with local password first</li>
+          <li>Complete Platform SSO registration from within macOS</li>
+          <li>Verify registration status: <code>app-sso platform -s</code></li>
+          <li>Restart Mac after successful registration</li>
+          <li>Try logout/login again</li>
+        </ul>
+
+        <h4>Issue: SSO Not Working in Browsers</h4>
+        <p><strong>Symptoms:</strong> Still prompted for credentials when visiting Okta apps</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>URLs not configured in profile</li>
+          <li>Browser not supporting Platform SSO</li>
+          <li>Cookie/cache issues</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Verify URLs list in SSO profile includes your Okta domain</li>
+          <li>Use Safari (best support) or Chrome for testing</li>
+          <li>Clear browser cookies and cache</li>
+          <li>Close and reopen browser</li>
+          <li>Test in private/incognito window</li>
+        </ul>
+      </div>
+
+      <h2>Lab 3: Troubleshoot a Failed Registration</h2>
+
+      <div class="lab-header">
+        <p><strong>Estimated Time:</strong> 30 minutes</p>
+        <p><strong>Difficulty:</strong> Intermediate</p>
+        <p><strong>Platform:</strong> macOS or Windows</p>
+      </div>
+
+      <h3>Learning Objectives</h3>
+      <ul>
+        <li>Identify common registration failure scenarios</li>
+        <li>Use diagnostic commands to gather troubleshooting data</li>
+        <li>Analyze Okta Verify and system logs</li>
+        <li>Resolve registration issues systematically</li>
+        <li>Document findings and solutions</li>
+      </ul>
+
+      <h3>Prerequisites</h3>
+      <ul>
+        <li>Completed Lab 1 or Lab 2</li>
+        <li>Understanding of Okta Verify architecture</li>
+        <li>Access to test device with admin privileges</li>
+        <li>Familiarity with command line tools</li>
+      </ul>
+
+      <h3>Simulated Failure Scenarios</h3>
+
+      <h4>Scenario A: Missing Configuration Profile</h4>
+      <p>Simulate this by removing or misconfiguring the MDM profile</p>
+
+      <h4>Scenario B: Network Connectivity Issues</h4>
+      <p>Simulate by blocking access to Okta domains in firewall/hosts file</p>
+
+      <h4>Scenario C: Incorrect Org URL</h4>
+      <p>Simulate by deploying profile with wrong Okta domain</p>
+
+      <h3>Step-by-Step Diagnostic Process</h3>
+
+      <h4>Part 1: Initial Assessment</h4>
+
+      <div class="step">
+        <strong>Step 1.1:</strong> Gather Error Information
+        <ul>
+          <li>Note exact error message from Okta Verify</li>
+          <li>Screenshot error if possible</li>
+          <li>Record timestamp of failure</li>
+          <li>Document user account and device name</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 1.2:</strong> Verify Basic Prerequisites
+
+        <p><strong>On macOS:</strong></p>
+        <pre><code># Check Okta Verify installation
+ls -la /Applications/Okta\ Verify.app
+
+# Check configuration profile
+sudo profiles -L | grep -i okta
+
+# Check network connectivity
+ping your-domain.okta.com
+curl -I https://your-domain.okta.com</code></pre>
+
+        <p><strong>On Windows:</strong></p>
+        <pre><code># Check Okta Verify installation
+Get-ItemProperty "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*" | Where-Object { $_.DisplayName -like "*Okta*" }
+
+# Check Okta Verify service
+Get-Service OktaVerify
+
+# Check network connectivity
+Test-NetConnection your-domain.okta.com -Port 443</code></pre>
+      </div>
+
+      <h4>Part 2: Log Analysis</h4>
+
+      <div class="step">
+        <strong>Step 2.1:</strong> Collect Okta Verify Logs
+
+        <p><strong>On macOS:</strong></p>
+        <pre><code># View recent Okta Verify logs
+log show --predicate 'subsystem == "com.okta.OktaVerify"' --last 30m --info
+
+# Export logs to file
+log show --predicate 'subsystem == "com.okta.OktaVerify"' --last 30m > ~/Desktop/okta-verify-logs.txt
+
+# Check for errors specifically
+log show --predicate 'subsystem == "com.okta.OktaVerify" AND messageType == "Error"' --last 30m</code></pre>
+
+        <p><strong>On Windows:</strong></p>
+        <pre><code># View Okta Verify logs in Event Viewer
+Get-WinEvent -LogName "Okta Verify" -MaxEvents 50 | Format-List
+
+# Check for errors
+Get-WinEvent -LogName "Okta Verify" | Where-Object {$_.LevelDisplayName -eq "Error"} | Select-Object TimeCreated, Message
+
+# Export to file
+Get-WinEvent -LogName "Okta Verify" -MaxEvents 100 | Export-Csv C:\\Users\\Public\\okta-logs.csv</code></pre>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.2:</strong> Analyze Log Patterns
+        <p>Look for these common error patterns:</p>
+        <ul>
+          <li><strong>Network errors:</strong> "connection timeout", "unreachable", "DNS"</li>
+          <li><strong>Configuration errors:</strong> "invalid URL", "missing parameter", "malformed"</li>
+          <li><strong>Authentication errors:</strong> "invalid credentials", "MFA failed", "token expired"</li>
+          <li><strong>Permission errors:</strong> "access denied", "unauthorized", "insufficient privileges"</li>
+        </ul>
+      </div>
+
+      <h4>Part 3: Configuration Validation</h4>
+
+      <div class="step">
+        <strong>Step 3.1:</strong> Validate Profile Configuration
+
+        <p><strong>On macOS:</strong></p>
+        <pre><code># View full profile configuration
+sudo profiles show
+
+# Check Okta-specific settings
+defaults read com.okta.OktaVerify
+
+# Verify specific keys
+defaults read com.okta.OktaVerify OrgUrl
+defaults read com.okta.OktaVerify EnableDesktopAuth</code></pre>
+
+        <p><strong>On Windows:</strong></p>
+        <pre><code># Check registry settings
+Get-ItemProperty "HKLM:\\SOFTWARE\\Okta\\Okta Verify" -ErrorAction SilentlyContinue
+
+# Verify OrgUrl
+Get-ItemPropertyValue "HKLM:\\SOFTWARE\\Okta\\Okta Verify" -Name "OrgUrl" -ErrorAction SilentlyContinue</code></pre>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.2:</strong> Verify Network Connectivity
+        <pre><code># Test Okta domain reachability
+nslookup your-domain.okta.com
+
+# Test HTTPS connectivity
+curl -v https://your-domain.okta.com/.well-known/okta-organization
+
+# Check for proxy issues
+curl -v --proxy-insecure https://your-domain.okta.com</code></pre>
+      </div>
+
+      <h4>Part 4: Resolution Steps</h4>
+
+      <div class="step">
+        <strong>Step 4.1:</strong> Fix Common Issues
+
+        <p><strong>For Missing/Incorrect Configuration:</strong></p>
+        <ul>
+          <li>Redeploy MDM profile from admin console</li>
+          <li>Force device check-in: <code>sudo jamf policy</code> (macOS) or <code>Get-ScheduledTask | Where-Object {$_.TaskName -like "*Intune*"} | Start-ScheduledTask</code> (Windows)</li>
+          <li>Verify profile installation</li>
+          <li>Restart device if needed</li>
+        </ul>
+
+        <p><strong>For Network Issues:</strong></p>
+        <ul>
+          <li>Check firewall rules allow Okta domains</li>
+          <li>Verify proxy configuration if applicable</li>
+          <li>Test from different network if possible</li>
+          <li>Check hosts file for blocking entries: <code>cat /etc/hosts | grep okta</code></li>
+        </ul>
+
+        <p><strong>For Okta Verify Issues:</strong></p>
+        <ul>
+          <li>Quit Okta Verify completely</li>
+          <li>Clear app cache/preferences</li>
+          <li>Restart Okta Verify</li>
+          <li>Reinstall Okta Verify if necessary</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 4.2:</strong> Re-attempt Registration
+        <ul>
+          <li>Open Okta Verify</li>
+          <li>Remove failed account if present</li>
+          <li>Click <strong>Add Account</strong></li>
+          <li>Follow enrollment process</li>
+          <li>Monitor logs in real-time during attempt</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 4.3:</strong> Validate Success
+        <ul>
+          <li>Confirm device appears enrolled in Okta Verify</li>
+          <li>Check Okta Admin Console for device registration</li>
+          <li>Test authentication flow</li>
+          <li>Verify no errors in logs</li>
+        </ul>
+      </div>
+
+      <h3>Expected Outcomes</h3>
+      <ul>
+        <li>Successfully identified root cause of registration failure</li>
+        <li>Applied appropriate troubleshooting methodology</li>
+        <li>Resolved issue and completed successful registration</li>
+        <li>Documented diagnostic process and solution</li>
+        <li>Gained proficiency with diagnostic commands</li>
+      </ul>
+
+      <h3>Troubleshooting Decision Tree</h3>
+
+      <div class="decision-tree">
+        <pre><code>Registration Fails
+│
+├─→ Error: "Cannot find organization"
+│   ├─→ Check: Profile installed? → No → Deploy profile
+│   ├─→ Check: OrgUrl correct? → No → Fix profile config
+│   └─→ Check: Network access? → No → Fix connectivity
+│
+├─→ Error: "Authentication failed"
+│   ├─→ Check: Credentials correct? → No → Reset password
+│   ├─→ Check: MFA enrolled? → No → Enroll MFA first
+│   └─→ Check: User active in Okta? → No → Activate user
+│
+├─→ Error: "Service unavailable"
+│   ├─→ Check: Okta status page → Down → Wait for resolution
+│   ├─→ Check: Network connectivity → Failed → Fix network
+│   └─→ Check: Proxy settings → Wrong → Configure proxy
+│
+└─→ No error, but fails silently
+    ├─→ Check: Logs for errors → Found → Analyze error
+    ├─→ Check: Okta Verify version → Outdated → Update app
+    └─→ Check: Device meeting requirements? → No → Upgrade OS</code></pre>
+      </div>
+
+      <h3>Documentation Template</h3>
+
+      <div class="documentation">
+        <h4>Incident Report Template</h4>
+        <pre><code>Date/Time: [timestamp]
+Device: [hostname/serial]
+User: [username]
+Platform: [macOS/Windows + version]
+Okta Verify Version: [version]
+
+Symptom:
+[Describe what user experienced]
+
+Error Message:
+[Exact error text or screenshot]
+
+Diagnostic Steps Taken:
+1. [Step 1 and result]
+2. [Step 2 and result]
+3. [Step 3 and result]
+
+Root Cause:
+[What caused the issue]
+
+Resolution:
+[What fixed the issue]
+
+Prevention:
+[How to prevent in future]
+
+Time to Resolve: [minutes]</code></pre>
+      </div>
+
+      <div class="info-box">
+        <h3>Key Takeaways</h3>
+        <ul>
+          <li>Always gather error messages and timestamps first</li>
+          <li>Follow systematic diagnostic process</li>
+          <li>Logs are your best friend for root cause analysis</li>
+          <li>Validate configuration before and after changes</li>
+          <li>Document findings for future reference</li>
+          <li>Most issues are configuration or network related</li>
+        </ul>
+      </div>
+
+      <h2>Lab 4: Implement FastPass</h2>
+
+      <div class="lab-header">
+        <p><strong>Estimated Time:</strong> 50 minutes</p>
+        <p><strong>Difficulty:</strong> Advanced</p>
+        <p><strong>Platform:</strong> macOS or Windows</p>
+      </div>
+
+      <h3>Learning Objectives</h3>
+      <ul>
+        <li>Understand FastPass architecture and passwordless authentication</li>
+        <li>Configure authentication policies for FastPass</li>
+        <li>Register devices with FastPass</li>
+        <li>Test passwordless login flows</li>
+        <li>Understand the difference between Desktop MFA and FastPass</li>
+      </ul>
+
+      <h3>Prerequisites</h3>
+      <ul>
+        <li>Completed Lab 1 (Desktop MFA configuration)</li>
+        <li>Okta OIE tenant (required for FastPass)</li>
+        <li>Understanding of phishing-resistant authentication</li>
+        <li>MDM with configuration profiles deployed</li>
+        <li>Test user and device ready</li>
+      </ul>
+
+      <h3>Materials Needed</h3>
+      <ul>
+        <li>Okta OIE tenant</li>
+        <li>Okta Verify latest version (v4.0+)</li>
+        <li>macOS 11+ or Windows 10/11 device</li>
+        <li>Mobile device for backup authentication</li>
+        <li>MDM administrative access</li>
+      </ul>
+
+      <h3>Understanding FastPass vs Desktop MFA</h3>
+
+      <div class="comparison-box">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr style="background: #f0f0f0;">
+            <th style="padding: 10px; border: 1px solid #ddd;">Feature</th>
+            <th style="padding: 10px; border: 1px solid #ddd;">Desktop MFA</th>
+            <th style="padding: 10px; border: 1px solid #ddd;">FastPass</th>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Password Required</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Yes (local + Okta)</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">No (passwordless)</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Authentication Method</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Password + MFA</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Biometric + cryptographic key</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Phishing Resistance</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Moderate</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">High (FIDO2 compliant)</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>User Experience</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Password + approval</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Biometric only</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;"><strong>Okta Tenant</strong></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Classic or OIE</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">OIE only</td>
+          </tr>
+        </table>
+      </div>
+
+      <h3>Step-by-Step Instructions</h3>
+
+      <h4>Part 1: Configure Okta for FastPass</h4>
+
+      <div class="step">
+        <strong>Step 1.1:</strong> Enable FastPass in Okta Verify Settings
+        <ul>
+          <li>Log into Okta Admin Console</li>
+          <li>Navigate to <strong>Security → Authenticators</strong></li>
+          <li>Click <strong>Okta Verify</strong></li>
+          <li>Click <strong>Edit</strong></li>
+          <li>Under <strong>Device-based user verification</strong>, ensure enabled</li>
+          <li>Enable <strong>FastPass</strong></li>
+          <li>Click <strong>Save</strong></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 1.2:</strong> Configure Authentication Policy
+        <ul>
+          <li>Navigate to <strong>Security → Authentication Policies</strong></li>
+          <li>Create new policy or edit existing: "FastPass Policy"</li>
+          <li>Click <strong>Add Rule</strong></li>
+          <li>Name: "FastPass for Test Users"</li>
+          <li>Under <strong>AND User's authenticator</strong>:</li>
+          <ul>
+            <li>Select <strong>Okta Verify</strong></li>
+            <li>Choose <strong>FastPass</strong></li>
+            <li>Set as primary authenticator</li>
+          </ul>
+          <li>Under <strong>THEN Access is</strong>: "Allowed after successful authentication"</li>
+          <li>Click <strong>Create Rule</strong></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 1.3:</strong> Assign Policy to Test Users
+        <ul>
+          <li>In the policy settings, click <strong>Assignments</strong></li>
+          <li>Add test user group</li>
+          <li>Ensure policy has higher priority than other policies</li>
+          <li>Click <strong>Save</strong></li>
+        </ul>
+      </div>
+
+      <h4>Part 2: Deploy FastPass Configuration Profile</h4>
+
+      <div class="step">
+        <strong>Step 2.1:</strong> Update MDM Configuration Profile
+        <p><strong>For macOS (Jamf Pro):</strong></p>
+        <ul>
+          <li>Edit existing Okta Verify configuration profile</li>
+          <li>Update the plist to include FastPass settings:</li>
+        </ul>
+        <pre><code>&lt;key&gt;EnableFastPass&lt;/key&gt;
+&lt;true/&gt;
+&lt;key&gt;EnableUserVerification&lt;/key&gt;
+&lt;true/&gt;
+&lt;key&gt;RequireUserVerification&lt;/key&gt;
+&lt;true/&gt;</code></pre>
+
+        <p><strong>For Windows (Intune):</strong></p>
+        <ul>
+          <li>Navigate to Intune admin center</li>
+          <li>Go to <strong>Devices → Configuration profiles</strong></li>
+          <li>Edit Okta Verify profile</li>
+          <li>Add custom OMA-URI settings:</li>
+        </ul>
+        <pre><code>OMA-URI: ./Device/Vendor/MSFT/Okta/EnableFastPass
+Data type: Boolean
+Value: True
+
+OMA-URI: ./Device/Vendor/MSFT/Okta/RequireUserVerification
+Data type: Boolean
+Value: True</code></pre>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.2:</strong> Deploy Updated Profile
+        <ul>
+          <li>Save the configuration profile changes</li>
+          <li>Force device check-in or wait for auto-sync</li>
+          <li>Verify profile updates on test device</li>
+        </ul>
+      </div>
+
+      <h4>Part 3: Register Device with FastPass</h4>
+
+      <div class="step">
+        <strong>Step 3.1:</strong> Update Okta Verify
+        <ul>
+          <li>Ensure Okta Verify is version 4.0 or later</li>
+          <li>On the test device, open Okta Verify</li>
+          <li>If outdated, download latest from Okta Downloads</li>
+          <li>Install/update the application</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.2:</strong> Re-enroll Device for FastPass
+        <ul>
+          <li>In Okta Verify, if device already enrolled with Desktop MFA:</li>
+          <ul>
+            <li>Click account → <strong>Settings</strong></li>
+            <li>Look for <strong>Enable FastPass</strong> option</li>
+            <li>Click <strong>Enable</strong></li>
+            <li>Complete biometric verification</li>
+          </ul>
+          <li>For new enrollment:</li>
+          <ul>
+            <li>Click <strong>Add Account</strong></li>
+            <li>Sign in with test user credentials</li>
+            <li>When prompted, choose <strong>FastPass</strong> enrollment</li>
+            <li>Set up biometric authentication (Touch ID, Face ID, Windows Hello)</li>
+            <li>Complete enrollment</li>
+          </ul>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.3:</strong> Verify FastPass Registration
+        <ul>
+          <li>In Okta Admin Console, navigate to <strong>Directory → People</strong></li>
+          <li>Find test user, click their name</li>
+          <li>Click <strong>Okta Verify</strong> tab</li>
+          <li>Verify device shows <strong>FastPass</strong> badge/indicator</li>
+          <li>Confirm <strong>User Verification</strong> is enabled</li>
+        </ul>
+      </div>
+
+      <h4>Part 4: Test Passwordless Authentication</h4>
+
+      <div class="step">
+        <strong>Step 4.1:</strong> Test Browser-Based Login
+        <ul>
+          <li>Open a browser in incognito/private mode</li>
+          <li>Navigate to your Okta org URL</li>
+          <li>Enter test user's username</li>
+          <li>Instead of password prompt, observe FastPass challenge</li>
+          <li>Notification appears on device</li>
+          <li>Complete biometric verification (Touch ID/Face ID/Windows Hello)</li>
+          <li>Verify automatic login without password</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 4.2:</strong> Test Desktop Login (if Platform SSO enabled)
+        <ul>
+          <li>Log out of the operating system</li>
+          <li>At login screen, select test user</li>
+          <li>Enter any placeholder (FastPass overrides password)</li>
+          <li>Complete biometric verification</li>
+          <li>Verify successful passwordless login to OS</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 4.3:</strong> Test Application SSO
+        <ul>
+          <li>Access Okta-integrated SaaS application</li>
+          <li>Should redirect to Okta</li>
+          <li>FastPass challenge appears automatically</li>
+          <li>Complete biometric verification</li>
+          <li>Verify automatic login to application</li>
+          <li>No password entry required</li>
+        </ul>
+      </div>
+
+      <h3>Expected Outcomes</h3>
+      <ul>
+        <li>FastPass enabled in Okta Verify authenticator settings</li>
+        <li>Authentication policy configured for FastPass</li>
+        <li>Device registered with FastPass capability</li>
+        <li>User can authenticate without passwords</li>
+        <li>Biometric verification works consistently</li>
+        <li>Seamless SSO across applications</li>
+      </ul>
+
+      <h3>Validation Steps</h3>
+
+      <div class="validation">
+        <h4>1. Verify FastPass Enrollment in Okta</h4>
+        <ul>
+          <li>Admin Console → Directory → People → [User]</li>
+          <li>Check <strong>Okta Verify</strong> tab</li>
+          <li>Confirm FastPass badge on device</li>
+          <li>Verify "User Verification: Enabled"</li>
+        </ul>
+
+        <h4>2. Check Device Configuration</h4>
+        <p><strong>macOS:</strong></p>
+        <pre><code>defaults read com.okta.OktaVerify EnableFastPass
+defaults read com.okta.OktaVerify EnableUserVerification</code></pre>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Get-ItemPropertyValue "HKLM:\\SOFTWARE\\Okta\\Okta Verify" -Name "EnableFastPass"</code></pre>
+
+        <h4>3. Test Authentication Flow</h4>
+        <ul>
+          <li>Attempt login to Okta dashboard</li>
+          <li>Should NOT prompt for password</li>
+          <li>Should show FastPass biometric challenge</li>
+          <li>Login completes after biometric verification</li>
+        </ul>
+
+        <h4>4. Review System Logs</h4>
+        <p><strong>macOS:</strong></p>
+        <pre><code>log show --predicate 'subsystem == "com.okta.OktaVerify" AND message CONTAINS "FastPass"' --last 10m</code></pre>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Get-WinEvent -LogName "Okta Verify" | Where-Object {$_.Message -like "*FastPass*"} | Select-Object -First 10</code></pre>
+      </div>
+
+      <h3>Common Issues and Troubleshooting</h3>
+
+      <div class="troubleshooting">
+        <h4>Issue: FastPass Option Not Available</h4>
+        <p><strong>Symptoms:</strong> Can't enable FastPass in Okta Verify</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Okta tenant is Classic (not OIE)</li>
+          <li>Okta Verify version outdated</li>
+          <li>FastPass not enabled in authenticator settings</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Verify OIE: Admin Console → Settings → Account → check for "Identity Engine"</li>
+          <li>Update Okta Verify to v4.0 or later</li>
+          <li>Enable FastPass in Security → Authenticators → Okta Verify</li>
+        </ul>
+
+        <h4>Issue: Biometric Verification Fails</h4>
+        <p><strong>Symptoms:</strong> Touch ID/Face ID/Windows Hello not working</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Biometric not set up on device</li>
+          <li>Hardware doesn't support required biometric</li>
+          <li>User verification settings incorrect</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li><strong>macOS:</strong> System Settings → Touch ID & Password → verify fingerprints enrolled</li>
+          <li><strong>Windows:</strong> Settings → Accounts → Sign-in options → verify Windows Hello configured</li>
+          <li>Test biometric with other apps to verify hardware works</li>
+          <li>Re-enroll biometric if necessary</li>
+        </ul>
+
+        <h4>Issue: Still Prompted for Password</h4>
+        <p><strong>Symptoms:</strong> Login flow requests password instead of FastPass</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Authentication policy not applied correctly</li>
+          <li>User not in FastPass policy scope</li>
+          <li>Device not registered with FastPass</li>
+          <li>Browser not detecting device</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Verify user is in group assigned to FastPass policy</li>
+          <li>Check policy priority (FastPass policy should be higher)</li>
+          <li>Confirm device shows FastPass in Admin Console</li>
+          <li>Clear browser cache and cookies</li>
+          <li>Try different browser</li>
+        </ul>
+
+        <h4>Issue: "This device doesn't meet requirements"</h4>
+        <p><strong>Symptoms:</strong> Error during FastPass enrollment</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Missing biometric hardware</li>
+          <li>OS version too old</li>
+          <li>TPM/Secure Enclave not available</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Verify device has Touch ID, Face ID, or Windows Hello compatible hardware</li>
+          <li>Check OS version: macOS 11+ or Windows 10 1809+</li>
+          <li>For Windows: Verify TPM 2.0: <code>Get-Tpm</code></li>
+          <li>For macOS: Verify T2 or Apple Silicon chip</li>
+        </ul>
+      </div>
+
+      <h2>Lab 5: Configure Desktop MFA for Windows in Intune</h2>
+
+      <div class="lab-header">
+        <p><strong>Estimated Time:</strong> 40 minutes</p>
+        <p><strong>Difficulty:</strong> Beginner</p>
+        <p><strong>Platform:</strong> Windows 10/11 with Microsoft Intune</p>
+      </div>
+
+      <h3>Learning Objectives</h3>
+      <ul>
+        <li>Create a Windows configuration profile in Intune</li>
+        <li>Configure Okta Verify Credential Provider settings</li>
+        <li>Deploy configuration to Windows devices</li>
+        <li>Test Desktop MFA on Windows login</li>
+        <li>Validate successful deployment</li>
+      </ul>
+
+      <h3>Prerequisites</h3>
+      <ul>
+        <li>Microsoft Intune subscription and admin access</li>
+        <li>Windows 10 (1809+) or Windows 11 device</li>
+        <li>Device enrolled in Intune</li>
+        <li>Okta admin access</li>
+        <li>Test user with mobile Okta Verify enrolled</li>
+      </ul>
+
+      <h3>Materials Needed</h3>
+      <ul>
+        <li>Okta domain URL</li>
+        <li>Microsoft Endpoint Manager admin center access</li>
+        <li>Windows 10/11 test device</li>
+        <li>Mobile device with Okta Verify</li>
+        <li>Test user credentials</li>
+      </ul>
+
+      <h3>Step-by-Step Instructions</h3>
+
+      <h4>Part 1: Configure Okta (Same as Lab 1)</h4>
+
+      <div class="step">
+        <strong>Step 1.1:</strong> Enable Desktop MFA
+        <ul>
+          <li>Log into Okta Admin Console</li>
+          <li>Navigate to <strong>Security → Authenticators</strong></li>
+          <li>Click <strong>Okta Verify</strong> → <strong>Edit</strong></li>
+          <li>Enable <strong>Desktop authentication</strong></li>
+          <li>Click <strong>Save</strong></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 1.2:</strong> Create or Update Authentication Policy
+        <ul>
+          <li>Security → Authentication Policies</li>
+          <li>Create or edit policy for Windows devices</li>
+          <li>Add rule requiring Okta Verify for desktop auth</li>
+          <li>Assign to test user group</li>
+        </ul>
+      </div>
+
+      <h4>Part 2: Create Configuration Profile in Intune</h4>
+
+      <div class="step">
+        <strong>Step 2.1:</strong> Access Intune Configuration Profiles
+        <ul>
+          <li>Log into <strong>Microsoft Endpoint Manager admin center</strong></li>
+          <li>Navigate to <strong>Devices → Configuration profiles</strong></li>
+          <li>Click <strong>+ Create profile</strong></li>
+          <li>Platform: <strong>Windows 10 and later</strong></li>
+          <li>Profile type: <strong>Templates → Custom</strong></li>
+          <li>Click <strong>Create</strong></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.2:</strong> Configure Basic Settings
+        <ul>
+          <li>Name: "Okta Desktop MFA for Windows"</li>
+          <li>Description: "Enables Okta Verify Desktop MFA on Windows devices"</li>
+          <li>Click <strong>Next</strong></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.3:</strong> Add OMA-URI Settings
+        <p>Add the following OMA-URI configurations (click <strong>Add</strong> for each):</p>
+
+        <p><strong>1. Organization URL:</strong></p>
+        <pre><code>Name: Okta Organization URL
+OMA-URI: ./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/OrgUrl
+Data type: String
+Value: https://your-domain.okta.com</code></pre>
+
+        <p><strong>2. Enable Desktop Authentication:</strong></p>
+        <pre><code>Name: Enable Desktop Authentication
+OMA-URI: ./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/EnableDesktopAuth
+Data type: Integer
+Value: 1</code></pre>
+
+        <p><strong>3. Enabled Factors:</strong></p>
+        <pre><code>Name: Enabled Factors
+OMA-URI: ./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/EnabledFactors
+Data type: String
+Value: push,totp</code></pre>
+
+        <p><strong>4. Grace Period:</strong></p>
+        <pre><code>Name: Grace Period Minutes
+OMA-URI: ./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/GracePeriodMinutes
+Data type: Integer
+Value: 60</code></pre>
+
+        <p><strong>5. Enable Password Sync (optional):</strong></p>
+        <pre><code>Name: Enable Password Sync
+OMA-URI: ./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/EnablePasswordSync
+Data type: Integer
+Value: 0</code></pre>
+
+        <p><strong>Note:</strong> Replace <code>your-domain.okta.com</code> with your actual Okta domain</p>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.4:</strong> Configure Assignments
+        <ul>
+          <li>Click <strong>Next</strong> to Assignments</li>
+          <li>Under <strong>Included groups</strong>, add test device group or test users</li>
+          <li>Click <strong>Next</strong></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.5:</strong> Review and Create
+        <ul>
+          <li>Review all settings</li>
+          <li>Click <strong>Create</strong></li>
+          <li>Profile will begin deploying to assigned devices</li>
+        </ul>
+      </div>
+
+      <h4>Part 3: Deploy Okta Verify Application</h4>
+
+      <div class="step">
+        <strong>Step 3.1:</strong> Add Okta Verify as Win32 App
+        <ul>
+          <li>In Endpoint Manager, go to <strong>Apps → All apps</strong></li>
+          <li>Click <strong>+ Add</strong></li>
+          <li>App type: <strong>Windows app (Win32)</strong></li>
+          <li>Upload Okta Verify installer (.intunewin format)</li>
+        </ul>
+        <p><strong>Note:</strong> Download Okta Verify MSI from Okta Downloads, then package as .intunewin using Microsoft Win32 Content Prep Tool</p>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.2:</strong> Configure App Settings
+        <ul>
+          <li>Name: "Okta Verify"</li>
+          <li>Publisher: "Okta, Inc."</li>
+          <li>Install command: <code>msiexec /i OktaVerify.msi /qn</code></li>
+          <li>Uninstall command: <code>msiexec /x OktaVerify.msi /qn</code></li>
+          <li>Install behavior: <strong>System</strong></li>
+          <li>Device restart behavior: <strong>Determine based on return codes</strong></li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.3:</strong> Set Requirements and Detection Rules
+        <ul>
+          <li>Operating system: <strong>Windows 10 1809+</strong></li>
+          <li>Architecture: <strong>64-bit</strong></li>
+          <li>Detection rule type: <strong>MSI</strong></li>
+          <li>MSI product code: (auto-detected from installer)</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.4:</strong> Assign and Deploy
+        <ul>
+          <li>Under <strong>Assignments</strong>, add device group</li>
+          <li>Set as <strong>Required</strong> for automatic installation</li>
+          <li>Click <strong>Create</strong></li>
+        </ul>
+      </div>
+
+      <h4>Part 4: Test Desktop MFA on Windows</h4>
+
+      <div class="step">
+        <strong>Step 4.1:</strong> Verify Profile and App Installation
+        <ul>
+          <li>On Windows test device, sync with Intune:</li>
+          <ul>
+            <li>Settings → Accounts → Access work or school</li>
+            <li>Click your org account → <strong>Info</strong></li>
+            <li>Click <strong>Sync</strong></li>
+          </ul>
+          <li>Wait 5-10 minutes for profile and app to deploy</li>
+          <li>Verify Okta Verify installed: Check Start menu or Programs list</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 4.2:</strong> Verify Registry Settings
+        <ul>
+          <li>Open Registry Editor (regedit.exe) as admin</li>
+          <li>Navigate to: <code>HKEY_LOCAL_MACHINE\\SOFTWARE\\Okta\\Okta Verify</code></li>
+          <li>Verify keys exist: OrgUrl, EnableDesktopAuth, EnabledFactors, etc.</li>
+          <li>Confirm values are correct</li>
+        </ul>
+        <p><strong>Alternative (PowerShell):</strong></p>
+        <pre><code>Get-ItemProperty "HKLM:\\SOFTWARE\\Okta\\Okta Verify"</code></pre>
+      </div>
+
+      <div class="step">
+        <strong>Step 4.3:</strong> Enroll Device in Okta Verify
+        <ul>
+          <li>Launch Okta Verify from Start menu</li>
+          <li>Should auto-detect org URL from registry</li>
+          <li>Click <strong>Add Account</strong></li>
+          <li>Sign in with test user credentials</li>
+          <li>Approve push notification on mobile device</li>
+          <li>Complete enrollment</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 4.4:</strong> Test Desktop MFA Login
+        <ul>
+          <li>Lock Windows (Win+L) or sign out</li>
+          <li>At login screen, select test user</li>
+          <li>Enter local Windows password</li>
+          <li>Observe Okta Verify Credential Provider screen</li>
+          <li>Complete MFA challenge (push or TOTP)</li>
+          <li>Verify successful login</li>
+        </ul>
+      </div>
+
+      <h3>Expected Outcomes</h3>
+      <ul>
+        <li>Configuration profile successfully deployed via Intune</li>
+        <li>Registry keys correctly set on Windows device</li>
+        <li>Okta Verify installed automatically</li>
+        <li>Device enrolled in Okta</li>
+        <li>Desktop MFA triggers at Windows login</li>
+        <li>User can authenticate with MFA</li>
+      </ul>
+
+      <h3>Validation Steps</h3>
+
+      <div class="validation">
+        <h4>1. Verify Intune Profile Deployment</h4>
+        <ul>
+          <li>Endpoint Manager → Devices → All devices → [Device name]</li>
+          <li>Click <strong>Device configuration</strong></li>
+          <li>Confirm "Okta Desktop MFA for Windows" shows as <strong>Succeeded</strong></li>
+        </ul>
+
+        <h4>2. Check Registry Settings</h4>
+        <pre><code>Get-ItemProperty "HKLM:\\SOFTWARE\\Okta\\Okta Verify" | Format-List</code></pre>
+        <p><strong>Expected:</strong> All configured keys present with correct values</p>
+
+        <h4>3. Verify Okta Verify Service</h4>
+        <pre><code>Get-Service OktaVerify</code></pre>
+        <p><strong>Expected:</strong> Status = Running</p>
+
+        <h4>4. Check Credential Provider Registration</h4>
+        <pre><code>Get-ItemProperty "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers" | Where-Object {$_ -like "*Okta*"}</code></pre>
+        <p><strong>Expected:</strong> Okta Credential Provider GUID present</p>
+
+        <h4>5. View Event Logs</h4>
+        <pre><code>Get-WinEvent -LogName "Okta Verify" -MaxEvents 10 | Format-List</code></pre>
+        <p><strong>Expected:</strong> Recent enrollment and authentication events</p>
+      </div>
+
+      <h3>Common Issues and Troubleshooting</h3>
+
+      <div class="troubleshooting">
+        <h4>Issue: Profile Not Applying</h4>
+        <p><strong>Symptoms:</strong> Registry keys not created on device</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Device not syncing with Intune</li>
+          <li>Device not in assigned group</li>
+          <li>OMA-URI syntax errors</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Force sync: Settings → Accounts → Access work or school → Sync</li>
+          <li>Verify device is in correct Azure AD group</li>
+          <li>Check Intune profile status for errors</li>
+          <li>Review OMA-URI paths for typos</li>
+        </ul>
+
+        <h4>Issue: Okta Verify Not Installing</h4>
+        <p><strong>Symptoms:</strong> App doesn't appear after Intune deployment</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>App not assigned as Required</li>
+          <li>Detection rule failing</li>
+          <li>Installation command errors</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Check app assignment: must be Required, not Available</li>
+          <li>Review Intune app installation logs</li>
+          <li>Manually test MSI installation</li>
+          <li>Check Event Viewer → Application logs for MSI errors</li>
+        </ul>
+
+        <h4>Issue: Credential Provider Not Appearing</h4>
+        <p><strong>Symptoms:</strong> No Okta challenge at Windows login</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Okta Verify service not running</li>
+          <li>Device not enrolled in Okta</li>
+          <li>EnableDesktopAuth set to 0</li>
+          <li>Grace period still active</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Start service: <code>Start-Service OktaVerify</code></li>
+          <li>Complete device enrollment in Okta Verify app</li>
+          <li>Verify EnableDesktopAuth = 1 in registry</li>
+          <li>Set GracePeriodMinutes to 0 for testing</li>
+          <li>Restart Windows after enrollment</li>
+        </ul>
+
+        <h4>Issue: "The Okta Verify service is not available"</h4>
+        <p><strong>Symptoms:</strong> Error at login screen</p>
+        <p><strong>Causes:</strong></p>
+        <ul>
+          <li>Okta Verify service crashed or disabled</li>
+          <li>Network connectivity issues</li>
+          <li>Okta org unreachable</li>
+        </ul>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+          <li>Check service status: <code>Get-Service OktaVerify</code></li>
+          <li>Restart service: <code>Restart-Service OktaVerify</code></li>
+          <li>Set service to Automatic: <code>Set-Service OktaVerify -StartupType Automatic</code></li>
+          <li>Test network: <code>Test-NetConnection your-domain.okta.com -Port 443</code></li>
+          <li>Check Event Viewer for service errors</li>
+        </ul>
+      </div>
+
+      <h2>Lab 6: Multi-Factor Recovery Scenarios</h2>
+
+      <div class="lab-header">
+        <p><strong>Estimated Time:</strong> 35 minutes</p>
+        <p><strong>Difficulty:</strong> Intermediate</p>
+        <p><strong>Platform:</strong> macOS and Windows</p>
+      </div>
+
+      <h3>Learning Objectives</h3>
+      <ul>
+        <li>Understand recovery scenarios for Desktop MFA</li>
+        <li>Configure and test recovery PIN functionality</li>
+        <li>Execute self-service MFA reset procedures</li>
+        <li>Perform admin-initiated device unlock</li>
+        <li>Document recovery processes for end users</li>
+      </ul>
+
+      <h3>Prerequisites</h3>
+      <ul>
+        <li>Completed Lab 1 or Lab 5 (Desktop MFA configured)</li>
+        <li>Enrolled device with Desktop MFA active</li>
+        <li>Okta admin access</li>
+        <li>Understanding of MFA concepts</li>
+      </ul>
+
+      <h3>Common Recovery Scenarios</h3>
+
+      <div class="scenario-box">
+        <p><strong>Scenario 1:</strong> User lost mobile device with Okta Verify</p>
+        <p><strong>Scenario 2:</strong> Mobile device offline/out of battery</p>
+        <p><strong>Scenario 3:</strong> User can't receive push notifications</p>
+        <p><strong>Scenario 4:</strong> Device enrollment corrupted or failed</p>
+        <p><strong>Scenario 5:</strong> User locked out after multiple failed attempts</p>
+      </div>
+
+      <h3>Step-by-Step Instructions</h3>
+
+      <h4>Part 1: Recovery PIN Setup and Usage</h4>
+
+      <div class="step">
+        <strong>Step 1.1:</strong> Generate Recovery PIN in Okta Verify
+        <ul>
+          <li>On enrolled device, open Okta Verify</li>
+          <li>Click account → <strong>Settings</strong></li>
+          <li>Look for <strong>Recovery</strong> or <strong>Offline Access</strong> section</li>
+          <li>Click <strong>Generate Recovery PIN</strong></li>
+          <li>Note: PIN format is typically 6-8 digits</li>
+          <li>Save PIN securely (password manager, encrypted note)</li>
+        </ul>
+        <p><strong>Important:</strong> Recovery PIN should be stored separately from device</p>
+      </div>
+
+      <div class="step">
+        <strong>Step 1.2:</strong> Test Recovery PIN
+        <ul>
+          <li>Simulate scenario: Put mobile device in airplane mode</li>
+          <li>Lock computer and attempt login</li>
+          <li>Enter local password</li>
+          <li>When Okta MFA challenge appears, look for "Use Recovery PIN" or "Can't access your device?"</li>
+          <li>Click the option and enter recovery PIN</li>
+          <li>Verify successful login</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 1.3:</strong> Recovery PIN Limitations
+        <p>Understand and document these limitations:</p>
+        <ul>
+          <li>PIN typically valid for limited time (e.g., 7-30 days)</li>
+          <li>Limited number of uses (e.g., 5-10 times)</li>
+          <li>New PIN must be generated periodically</li>
+          <li>PIN tied to specific device enrollment</li>
+          <li>Not available for all authentication policies</li>
+        </ul>
+      </div>
+
+      <h4>Part 2: Self-Service MFA Reset</h4>
+
+      <div class="step">
+        <strong>Step 2.1:</strong> Access Self-Service Recovery
+        <ul>
+          <li>From desktop login screen, click "Need help signing in?"</li>
+          <li>Or navigate to: <code>https://your-domain.okta.com/signin/forgot-password</code></li>
+          <li>Enter username</li>
+          <li>Select recovery method (email or SMS if configured)</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.2:</strong> Complete Identity Verification
+        <ul>
+          <li>Receive recovery code via email or SMS</li>
+          <li>Enter verification code</li>
+          <li>Answer security questions if configured</li>
+          <li>Proceed to MFA reset options</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.3:</strong> Re-enroll MFA Factor
+        <ul>
+          <li>After identity verification, access MFA settings</li>
+          <li>Remove old Okta Verify enrollment</li>
+          <li>Add new Okta Verify enrollment</li>
+          <li>Scan QR code with new/replacement mobile device</li>
+          <li>Complete setup</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 2.4:</strong> Validate Desktop MFA After Reset
+        <ul>
+          <li>On desktop, open Okta Verify application</li>
+          <li>May need to re-enroll desktop device</li>
+          <li>Sign in with updated credentials</li>
+          <li>Test desktop login with new MFA setup</li>
+        </ul>
+      </div>
+
+      <h4>Part 3: Admin-Initiated Recovery</h4>
+
+      <div class="step">
+        <strong>Step 3.1:</strong> Locate User in Admin Console
+        <ul>
+          <li>Log into Okta Admin Console</li>
+          <li>Navigate to <strong>Directory → People</strong></li>
+          <li>Search for affected user</li>
+          <li>Click username to view profile</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.2:</strong> Reset MFA Factors
+        <ul>
+          <li>In user profile, click <strong>Security</strong> tab</li>
+          <li>Scroll to <strong>Factor Enrollments</strong> section</li>
+          <li>Find Okta Verify enrollment</li>
+          <li>Click <strong>Actions → Reset</strong></li>
+          <li>Confirm reset action</li>
+        </ul>
+        <p><strong>Note:</strong> This removes the factor enrollment, requiring user to re-enroll</p>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.3:</strong> Unlock User Account (if locked)</strong>
+        <ul>
+          <li>If user locked due to failed attempts, in user profile:</li>
+          <li>Click <strong>More Actions → Unlock User</strong></li>
+          <li>Confirm unlock</li>
+          <li>User can now attempt login again</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 3.4:</strong> Communicate with User
+        <ul>
+          <li>Notify user that MFA has been reset</li>
+          <li>Provide re-enrollment instructions</li>
+          <li>User needs to enroll new Okta Verify on mobile</li>
+          <li>Then re-enroll desktop device</li>
+          <li>Verify successful login after re-enrollment</li>
+        </ul>
+      </div>
+
+      <h4>Part 4: Bypass Codes (Temporary Access)</h4>
+
+      <div class="step">
+        <strong>Step 4.1:</strong> Generate Temporary Bypass Code
+        <ul>
+          <li>In Okta Admin Console, navigate to user profile</li>
+          <li>Click <strong>Security</strong> tab</li>
+          <li>Under <strong>Factor Enrollments</strong>, click <strong>Actions</strong></li>
+          <li>Select <strong>Generate Temporary Access Code</strong> (if available)</li>
+          <li>Note: Feature availability depends on Okta configuration</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 4.2:</strong> Communicate Code to User
+        <ul>
+          <li>Securely share bypass code with user (phone call, secure chat)</li>
+          <li>Inform user of code expiration time</li>
+          <li>Instruct user to use code for one-time access</li>
+          <li>Emphasize re-enrolling MFA immediately after access</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 4.3:</strong> User Uses Bypass Code
+        <ul>
+          <li>User attempts desktop login</li>
+          <li>Enters local password</li>
+          <li>At MFA challenge, enters bypass code instead of MFA</li>
+          <li>Gains temporary access</li>
+          <li>Immediately re-enrolls MFA factors</li>
+        </ul>
+      </div>
+
+      <h4>Part 5: Emergency Access Procedures</h4>
+
+      <div class="step">
+        <strong>Step 5.1:</strong> Local Administrator Override (Windows)
+        <ul>
+          <li>If user completely locked out of Windows:</li>
+          <li>Boot into Safe Mode or use local admin account</li>
+          <li>Disable Okta Verify Credential Provider temporarily:</li>
+        </ul>
+        <pre><code># Disable Okta Credential Provider
+Set-ItemProperty "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers\\{Okta-GUID}" -Name "Disabled" -Value 1
+
+# Or stop Okta Verify service
+Stop-Service OktaVerify
+Set-Service OktaVerify -StartupType Disabled</code></pre>
+        <ul>
+          <li>User can now login with local password only</li>
+          <li>Re-enroll Okta Verify</li>
+          <li>Re-enable credential provider</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <strong>Step 5.2:</strong> Recovery Mode (macOS)
+        <ul>
+          <li>Boot into Recovery Mode (Cmd+R at startup)</li>
+          <li>Open Terminal from Utilities menu</li>
+          <li>Remove Okta configuration profile:</li>
+        </ul>
+        <pre><code>profiles remove -identifier com.okta.OktaVerify</code></pre>
+        <ul>
+          <li>Reboot normally</li>
+          <li>User can login without MFA</li>
+          <li>Re-deploy profile and re-enroll</li>
+        </ul>
+        <p><strong>Warning:</strong> This should only be used in true emergency scenarios</p>
+      </div>
+
+      <h3>Expected Outcomes</h3>
+      <ul>
+        <li>Understanding of multiple recovery paths</li>
+        <li>Successfully tested recovery PIN functionality</li>
+        <li>Completed self-service MFA reset process</li>
+        <li>Performed admin-initiated unlock and reset</li>
+        <li>Documented recovery procedures for helpdesk</li>
+        <li>Established emergency access protocols</li>
+      </ul>
+
+      <h3>Recovery Decision Matrix</h3>
+
+      <div class="decision-matrix">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr style="background: #f0f0f0;">
+            <th style="padding: 10px; border: 1px solid #ddd;">Scenario</th>
+            <th style="padding: 10px; border: 1px solid #ddd;">User Self-Service</th>
+            <th style="padding: 10px; border: 1px solid #ddd;">Helpdesk Action</th>
+            <th style="padding: 10px; border: 1px solid #ddd;">Admin Action</th>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Mobile device lost</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Use recovery PIN temporarily</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Guide through self-service reset</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Reset MFA if self-service unavailable</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Mobile offline</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Use recovery PIN or TOTP</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Remind user of offline options</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">No action needed</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Can't receive push</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Switch to TOTP in Okta Verify</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Troubleshoot push notifications</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Check user's authenticator config</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Enrollment corrupted</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Attempt re-enrollment</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Walk through re-enrollment</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Reset factor and redeploy profile</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Account locked</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Wait for auto-unlock period</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Verify identity, request unlock</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Unlock account immediately</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Complete lockout</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Contact helpdesk</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Escalate to admin</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Emergency access procedure</td>
+          </tr>
+        </table>
+      </div>
+
+      <h3>Best Practices for Recovery</h3>
+
+      <div class="best-practices">
+        <h4>For End Users:</h4>
+        <ul>
+          <li>Generate and save recovery PIN when setting up Desktop MFA</li>
+          <li>Store recovery PIN separately from device (password manager)</li>
+          <li>Enroll multiple MFA factors (Okta Verify + SMS + security key)</li>
+          <li>Keep mobile Okta Verify app updated</li>
+          <li>Test offline access periodically</li>
+          <li>Know helpdesk contact information</li>
+        </ul>
+
+        <h4>For Helpdesk:</h4>
+        <ul>
+          <li>Verify user identity before resetting MFA</li>
+          <li>Document all recovery actions in ticket system</li>
+          <li>Guide users through self-service when possible</li>
+          <li>Have escalation path to Okta admins</li>
+          <li>Maintain recovery procedure documentation</li>
+          <li>Track common recovery scenarios for process improvement</li>
+        </ul>
+
+        <h4>For Administrators:</h4>
+        <ul>
+          <li>Enable self-service MFA reset with appropriate verification</li>
+          <li>Configure account lockout policies appropriately</li>
+          <li>Set up monitoring for excessive lockouts</li>
+          <li>Document emergency access procedures</li>
+          <li>Maintain break-glass admin accounts</li>
+          <li>Test recovery procedures regularly</li>
+          <li>Communicate recovery options to end users proactively</li>
+        </ul>
+      </div>
+
+      <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+        <p><strong>Related Labs:</strong></p>
+        <ul>
+          <li>Lab 1: Configure Desktop MFA in Jamf Pro</li>
+          <li>Lab 2: Set up Platform SSO for macOS</li>
+          <li>Lab 3: Troubleshoot a Failed Registration</li>
+          <li>Lab 4: Implement FastPass</li>
+          <li>Lab 5: Configure Desktop MFA for Windows in Intune</li>
+        </ul>
+      </div>
+    `,
+    tags: ['labs', 'hands-on', 'training', 'desktop-mfa', 'platform-sso', 'troubleshooting', 'jamf', 'intune', 'macos', 'windows'],
+    source: 'internal',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isRead: false,
+    isStarter: true,
+  },
+  {
+    id: 'se-mdm-cheat-sheet',
+    title: 'MDM Payload Quick Reference for Okta Device Access',
+    category: 'quick-reference',
+    content: `
+      <h1>MDM Payload Quick Reference for Okta Device Access</h1>
+
+      <div class="info-box">
+        <h3>About This Reference</h3>
+        <p>This quick reference guide provides comprehensive details on MDM configuration payload keys for Okta Device Access deployment. Use this as your go-to resource when configuring Desktop MFA, Platform SSO, and FastPass in your MDM solution.</p>
+      </div>
+
+      <h2>Desktop MFA Plist Keys (macOS)</h2>
+
+      <h3>Core Configuration Keys</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Key Name</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Data Type</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Required</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Description</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Example Value</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>OrgUrl</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Your Okta organization URL</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>https://company.okta.com</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>EnableDesktopAuth</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Boolean</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Enable Desktop MFA authentication</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>true</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>EnabledFactors</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Array</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">MFA factors to enable (push, totp, sms)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>["push", "totp"]</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>GracePeriodMinutes</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Integer</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Time before MFA required after enrollment</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>60</code> (1 hour)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>EnablePasswordSync</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Boolean</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Sync macOS password with Okta password</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>false</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>EnableFastPass</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Boolean</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Enable passwordless FastPass authentication</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>true</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>EnableUserVerification</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Boolean</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Require biometric for user verification</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>true</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>RequireUserVerification</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Boolean</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Enforce user verification for all auth</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>true</code></td>
+        </tr>
+      </table>
+
+      <h3>Advanced Configuration Keys</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Key Name</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Data Type</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Required</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Description</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Example Value</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>OfflineAuthEnabled</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Boolean</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Allow offline authentication with cached credentials</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>true</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>OfflineAuthDurationDays</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Integer</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Number of days offline auth is valid</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>7</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>AutoUpdateEnabled</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Boolean</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Enable automatic Okta Verify updates</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>true</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>LogLevel</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Logging verbosity (error, warning, info, debug)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>info</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>ShowNotifications</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Boolean</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Display user-facing notifications</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>true</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>HideFromDock</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Boolean</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Hide Okta Verify icon from macOS Dock</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>false</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>RequireBiometric</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Boolean</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Require Touch ID/Face ID for Okta Verify</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>true</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>ProxyConfiguration</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Dictionary</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Custom proxy settings for network access</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">See Proxy Config section</td>
+        </tr>
+      </table>
+
+      <h3>Complete plist Example</h3>
+
+      <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+    &lt;key&gt;OrgUrl&lt;/key&gt;
+    &lt;string&gt;https://company.okta.com&lt;/string&gt;
+
+    &lt;key&gt;EnableDesktopAuth&lt;/key&gt;
+    &lt;true/&gt;
+
+    &lt;key&gt;EnabledFactors&lt;/key&gt;
+    &lt;array&gt;
+        &lt;string&gt;push&lt;/string&gt;
+        &lt;string&gt;totp&lt;/string&gt;
+    &lt;/array&gt;
+
+    &lt;key&gt;GracePeriodMinutes&lt;/key&gt;
+    &lt;integer&gt;60&lt;/integer&gt;
+
+    &lt;key&gt;EnablePasswordSync&lt;/key&gt;
+    &lt;false/&gt;
+
+    &lt;key&gt;EnableFastPass&lt;/key&gt;
+    &lt;true/&gt;
+
+    &lt;key&gt;EnableUserVerification&lt;/key&gt;
+    &lt;true/&gt;
+
+    &lt;key&gt;RequireUserVerification&lt;/key&gt;
+    &lt;true/&gt;
+
+    &lt;key&gt;OfflineAuthEnabled&lt;/key&gt;
+    &lt;true/&gt;
+
+    &lt;key&gt;OfflineAuthDurationDays&lt;/key&gt;
+    &lt;integer&gt;7&lt;/integer&gt;
+
+    &lt;key&gt;AutoUpdateEnabled&lt;/key&gt;
+    &lt;true/&gt;
+
+    &lt;key&gt;LogLevel&lt;/key&gt;
+    &lt;string&gt;info&lt;/string&gt;
+
+    &lt;key&gt;ShowNotifications&lt;/key&gt;
+    &lt;true/&gt;
+
+    &lt;key&gt;RequireBiometric&lt;/key&gt;
+    &lt;true/&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;</code></pre>
+
+      <h2>Platform SSO Payload Keys (macOS)</h2>
+
+      <h3>Extensible SSO Configuration</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Key Name</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Data Type</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Required</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Description</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Example Value</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>ExtensionIdentifier</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Okta Verify Platform SSO extension ID</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>com.okta.OktaVerify.OktaVerifyPlatformSSO</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>TeamIdentifier</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Okta's Apple Team ID</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>4WE73L84WQ</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>Type</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Extension type</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>Redirect</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>URLs</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Array</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Okta domain URLs for SSO</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>["https://company.okta.com"]</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>ScreenLockedBehavior</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Behavior when screen is locked (DoNotHandle, Authenticate)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>Authenticate</code></td>
+        </tr>
+      </table>
+
+      <h3>Extension Data Dictionary Keys</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Key Name</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Data Type</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Required</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Description</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Example Value</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>oktaURL</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Primary Okta organization URL</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>https://company.okta.com</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>registrationMode</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">How users register (userInitiated, automatic)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>userInitiated</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>enableSecureEnclaveKeys</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Boolean</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Store keys in Secure Enclave</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>true</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>accountDisplayName</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Display name for SSO account</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>Okta SSO Account</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>usernameAttribute</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Attribute for username mapping</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>email</code></td>
+        </tr>
+      </table>
+
+      <h3>Platform SSO Profile Example</h3>
+
+      <pre><code>&lt;key&gt;ExtensionIdentifier&lt;/key&gt;
+&lt;string&gt;com.okta.OktaVerify.OktaVerifyPlatformSSO&lt;/string&gt;
+
+&lt;key&gt;TeamIdentifier&lt;/key&gt;
+&lt;string&gt;4WE73L84WQ&lt;/string&gt;
+
+&lt;key&gt;Type&lt;/key&gt;
+&lt;string&gt;Redirect&lt;/string&gt;
+
+&lt;key&gt;URLs&lt;/key&gt;
+&lt;array&gt;
+    &lt;string&gt;https://company.okta.com&lt;/string&gt;
+    &lt;string&gt;https://company.okta-emea.com&lt;/string&gt;
+&lt;/array&gt;
+
+&lt;key&gt;ExtensionData&lt;/key&gt;
+&lt;dict&gt;
+    &lt;key&gt;oktaURL&lt;/key&gt;
+    &lt;string&gt;https://company.okta.com&lt;/string&gt;
+
+    &lt;key&gt;registrationMode&lt;/key&gt;
+    &lt;string&gt;userInitiated&lt;/string&gt;
+
+    &lt;key&gt;enableSecureEnclaveKeys&lt;/key&gt;
+    &lt;true/&gt;
+
+    &lt;key&gt;accountDisplayName&lt;/key&gt;
+    &lt;string&gt;Okta SSO Account&lt;/string&gt;
+&lt;/dict&gt;</code></pre>
+
+      <h2>Windows Registry Keys (Intune OMA-URI)</h2>
+
+      <h3>Desktop MFA Registry Configuration</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Registry Key</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Data Type</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Required</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Description</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Example Value</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>OrgUrl</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Okta organization URL</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>https://company.okta.com</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>EnableDesktopAuth</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Integer</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Enable Desktop MFA (1=enabled, 0=disabled)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>1</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>EnabledFactors</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">String</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Comma-separated list of factors</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>push,totp</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>GracePeriodMinutes</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Integer</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Grace period in minutes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>60</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>EnablePasswordSync</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Integer</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Enable password synchronization</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>0</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>EnableFastPass</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Integer</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Enable FastPass</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>1</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>RequireUserVerification</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Integer</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Require Windows Hello for FastPass</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>1</code></td>
+        </tr>
+      </table>
+
+      <h3>OMA-URI Path Template</h3>
+
+      <p>All keys follow this OMA-URI path format:</p>
+      <pre><code>./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/[KeyName]</code></pre>
+
+      <h3>Complete OMA-URI Examples</h3>
+
+      <pre><code>Name: Okta Organization URL
+OMA-URI: ./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/OrgUrl
+Data type: String
+Value: https://company.okta.com
+
+Name: Enable Desktop Authentication
+OMA-URI: ./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/EnableDesktopAuth
+Data type: Integer
+Value: 1
+
+Name: Enabled Factors
+OMA-URI: ./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/EnabledFactors
+Data type: String
+Value: push,totp
+
+Name: Grace Period Minutes
+OMA-URI: ./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/GracePeriodMinutes
+Data type: Integer
+Value: 60
+
+Name: Enable FastPass
+OMA-URI: ./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/EnableFastPass
+Data type: Integer
+Value: 1</code></pre>
+
+      <h2>Platform-Specific Differences</h2>
+
+      <h3>Jamf Pro vs Microsoft Intune vs Kandji</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Aspect</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Jamf Pro</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Microsoft Intune</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Kandji</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Configuration Format</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">XML plist</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">OMA-URI (Windows)<br/>plist (macOS)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">JSON or plist</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Profile Type</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Application & Custom Settings</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Custom Configuration Profile</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Custom Profile</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Preference Domain</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>com.okta.OktaVerify</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">N/A (uses OMA-URI on Windows)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>com.okta.OktaVerify</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Boolean Values</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>&lt;true/&gt;</code> or <code>&lt;false/&gt;</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Integer (1/0) for Windows<br/><code>&lt;true/&gt;</code> for macOS</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>true</code> or <code>false</code> (JSON)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Array Format</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>&lt;array&gt;&lt;string&gt;...&lt;/string&gt;&lt;/array&gt;</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Comma-separated string (Windows)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>["item1", "item2"]</code> (JSON)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Deployment Method</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Configuration Profile</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Configuration Profile + App deployment</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Custom Profile or Library Item</td>
+        </tr>
+      </table>
+
+      <h2>Common Value Examples</h2>
+
+      <h3>Factor Lists</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Configuration</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">macOS (Array)</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Windows (String)</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">Push notifications only</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>&lt;array&gt;&lt;string&gt;push&lt;/string&gt;&lt;/array&gt;</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>push</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">Push and TOTP</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>&lt;array&gt;&lt;string&gt;push&lt;/string&gt;&lt;string&gt;totp&lt;/string&gt;&lt;/array&gt;</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>push,totp</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">All factors</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>&lt;array&gt;&lt;string&gt;push&lt;/string&gt;&lt;string&gt;totp&lt;/string&gt;&lt;string&gt;sms&lt;/string&gt;&lt;/array&gt;</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>push,totp,sms</code></td>
+        </tr>
+      </table>
+
+      <h3>Grace Period Common Values</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Duration</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Value (Minutes)</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Use Case</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">No grace period</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>0</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Immediate MFA enforcement (testing, high security)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">30 minutes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>30</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Quick user onboarding window</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">1 hour</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>60</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Standard grace period</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">1 day</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>1440</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Generous onboarding for large rollouts</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">1 week</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>10080</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Extended pilot/testing period</td>
+        </tr>
+      </table>
+
+      <h3>Offline Authentication Settings</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Setting</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Recommended Value</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Notes</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>OfflineAuthEnabled</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>true</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Essential for users who travel or work remotely</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>OfflineAuthDurationDays</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>7</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Balance between security and usability</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">High security environment</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>1-3 days</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Shorter duration for sensitive environments</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">Remote workforce</td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>14-30 days</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Longer for distributed teams with connectivity challenges</td>
+        </tr>
+      </table>
+
+      <h2>Quick Troubleshooting Reference</h2>
+
+      <h3>Missing or Wrong Keys</h3>
+
+      <div class="troubleshooting-ref">
+        <h4>Symptom: Profile installs but Okta Verify doesn't detect org</h4>
+        <p><strong>Check:</strong></p>
+        <ul>
+          <li>OrgUrl key is present and spelled correctly (case-sensitive)</li>
+          <li>URL includes https:// protocol</li>
+          <li>URL doesn't have trailing slash</li>
+          <li>Domain matches your Okta org exactly</li>
+        </ul>
+        <p><strong>Verify on macOS:</strong></p>
+        <pre><code>defaults read com.okta.OktaVerify OrgUrl</code></pre>
+        <p><strong>Verify on Windows:</strong></p>
+        <pre><code>Get-ItemPropertyValue "HKLM:\\SOFTWARE\\Okta\\Okta Verify" -Name "OrgUrl"</code></pre>
+
+        <h4>Symptom: Desktop MFA not triggering at login</h4>
+        <p><strong>Check:</strong></p>
+        <ul>
+          <li>EnableDesktopAuth is set to <code>true</code> (macOS) or <code>1</code> (Windows)</li>
+          <li>GracePeriodMinutes has expired or set to 0</li>
+          <li>Device is enrolled in Okta Verify</li>
+          <li>User is within policy scope in Okta</li>
+        </ul>
+
+        <h4>Symptom: Wrong factors appearing</h4>
+        <p><strong>Check:</strong></p>
+        <ul>
+          <li>EnabledFactors array/string format is correct for platform</li>
+          <li>Factor names are lowercase (push, totp, sms)</li>
+          <li>No spaces in Windows comma-separated list</li>
+          <li>Factors are enabled in Okta admin console</li>
+        </ul>
+      </div>
+
+      <h3>Format Errors</h3>
+
+      <div class="format-errors">
+        <h4>Common plist Errors (macOS)</h4>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr style="background: #f0f0f0;">
+            <th style="padding: 10px; border: 1px solid #ddd;">Error</th>
+            <th style="padding: 10px; border: 1px solid #ddd;">Cause</th>
+            <th style="padding: 10px; border: 1px solid #ddd;">Fix</th>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Profile fails to install</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Malformed XML</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Validate plist syntax with <code>plutil</code> or online validator</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Key not recognized</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Typo in key name</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Check exact spelling and case from this reference</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Boolean not working</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Using <code>&lt;boolean&gt;true&lt;/boolean&gt;</code></td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Use <code>&lt;true/&gt;</code> or <code>&lt;false/&gt;</code> tags</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Array items not loading</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Missing <code>&lt;string&gt;</code> tags</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Each array item needs <code>&lt;string&gt;value&lt;/string&gt;</code></td>
+          </tr>
+        </table>
+
+        <h4>Common OMA-URI Errors (Windows/Intune)</h4>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr style="background: #f0f0f0;">
+            <th style="padding: 10px; border: 1px solid #ddd;">Error</th>
+            <th style="padding: 10px; border: 1px solid #ddd;">Cause</th>
+            <th style="padding: 10px; border: 1px solid #ddd;">Fix</th>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Policy not applying</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Incorrect OMA-URI path</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Ensure exact path: <code>./Device/Vendor/MSFT/Registry/HKLM/Software/Okta/Okta Verify/[Key]</code></td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Boolean key not working</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Using Boolean data type</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Use Integer type with values 1 (true) or 0 (false)</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Key name has spaces</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">OMA-URI doesn't escape spaces</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">"Okta Verify" in path should have space as-is</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Value not set</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Wrong data type selected</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Match data type exactly from table above</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="best-practices-box" style="margin-top: 30px; padding: 20px; background: #e8f5e9; border-radius: 8px;">
+        <h3>Best Practices</h3>
+        <ul>
+          <li><strong>Version control:</strong> Keep copies of your MDM profiles in version control</li>
+          <li><strong>Test first:</strong> Always deploy to test group before production rollout</li>
+          <li><strong>Document changes:</strong> Track which settings you modify and why</li>
+          <li><strong>Validate syntax:</strong> Use plist validators before uploading to MDM</li>
+          <li><strong>Start simple:</strong> Begin with minimal required keys, add optional features gradually</li>
+          <li><strong>Monitor deployment:</strong> Check MDM logs and device status after deployment</li>
+          <li><strong>Keep reference:</strong> Bookmark this page and Okta's official documentation</li>
+        </ul>
+      </div>
+    `,
+    tags: ['quick-reference', 'mdm', 'configuration', 'plist', 'oma-uri', 'jamf', 'intune', 'kandji', 'cheat-sheet'],
+    source: 'internal',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isRead: false,
+    isStarter: true,
+  },
+  {
+    id: 'se-troubleshooting-commands',
+    title: 'Troubleshooting Command Reference for Okta Device Access',
+    category: 'quick-reference',
+    content: `
+      <h1>Troubleshooting Command Reference for Okta Device Access</h1>
+
+      <div class="info-box">
+        <h3>About This Reference</h3>
+        <p>This quick reference provides essential diagnostic commands for troubleshooting Okta Device Access issues on Windows and macOS. Bookmark this page for quick access when diagnosing registration, authentication, or configuration problems.</p>
+      </div>
+
+      <h2>Windows Diagnostic Commands</h2>
+
+      <h3>Service Management</h3>
+
+      <h4>Check Okta Verify Service Status</h4>
+      <pre><code># PowerShell
+Get-Service OktaVerify
+
+# Expected output (Running):
+Status   Name               DisplayName
+------   ----               -----------
+Running  OktaVerify         Okta Verify</code></pre>
+
+      <h4>Restart Okta Verify Service</h4>
+      <pre><code># PowerShell (as Administrator)
+Restart-Service OktaVerify
+
+# Verify restart
+Get-Service OktaVerify</code></pre>
+
+      <h4>Set Service to Automatic Startup</h4>
+      <pre><code># PowerShell (as Administrator)
+Set-Service OktaVerify -StartupType Automatic
+
+# Verify setting
+Get-Service OktaVerify | Select-Object Name, Status, StartType</code></pre>
+
+      <h4>View Service Details</h4>
+      <pre><code># PowerShell
+Get-WmiObject Win32_Service | Where-Object {$_.Name -eq "OktaVerify"} | Format-List *</code></pre>
+
+      <h3>Registry Configuration</h3>
+
+      <h4>View All Okta Verify Registry Keys</h4>
+      <pre><code># PowerShell
+Get-ItemProperty "HKLM:\\SOFTWARE\\Okta\\Okta Verify" | Format-List</code></pre>
+
+      <h4>Check Specific Configuration Values</h4>
+      <pre><code># Organization URL
+Get-ItemPropertyValue "HKLM:\\SOFTWARE\\Okta\\Okta Verify" -Name "OrgUrl"
+
+# Desktop Auth Enabled
+Get-ItemPropertyValue "HKLM:\\SOFTWARE\\Okta\\Okta Verify" -Name "EnableDesktopAuth"
+
+# Enabled Factors
+Get-ItemPropertyValue "HKLM:\\SOFTWARE\\Okta\\Okta Verify" -Name "EnabledFactors"
+
+# Grace Period
+Get-ItemPropertyValue "HKLM:\\SOFTWARE\\Okta\\Okta Verify" -Name "GracePeriodMinutes"</code></pre>
+
+      <h4>Verify Credential Provider Registration</h4>
+      <pre><code># PowerShell
+Get-ItemProperty "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers\\*" |
+  Where-Object {$_.PSChildName -like "*Okta*" -or $_.Default -like "*Okta*"} |
+  Format-List</code></pre>
+
+      <h3>Event Viewer Logs</h3>
+
+      <h4>View Recent Okta Verify Events</h4>
+      <pre><code># PowerShell
+Get-WinEvent -LogName "Okta Verify" -MaxEvents 20 | Format-Table TimeCreated, LevelDisplayName, Message -AutoSize</code></pre>
+
+      <h4>Filter for Errors Only</h4>
+      <pre><code># PowerShell
+Get-WinEvent -LogName "Okta Verify" |
+  Where-Object {$_.LevelDisplayName -eq "Error"} |
+  Select-Object TimeCreated, Message |
+  Format-List</code></pre>
+
+      <h4>Export Logs to File</h4>
+      <pre><code># PowerShell
+Get-WinEvent -LogName "Okta Verify" -MaxEvents 100 |
+  Export-Csv C:\\Users\\Public\\okta-verify-logs.csv -NoTypeInformation</code></pre>
+
+      <h4>Search for Specific Events</h4>
+      <pre><code># Search for registration events
+Get-WinEvent -LogName "Okta Verify" |
+  Where-Object {$_.Message -like "*registration*"} |
+  Select-Object TimeCreated, Message
+
+# Search for authentication failures
+Get-WinEvent -LogName "Okta Verify" |
+  Where-Object {$_.Message -like "*failed*" -or $_.Message -like "*error*"} |
+  Select-Object TimeCreated, Message</code></pre>
+
+      <h3>Network Connectivity</h3>
+
+      <h4>Test Okta Domain Connectivity</h4>
+      <pre><code># PowerShell
+Test-NetConnection your-domain.okta.com -Port 443
+
+# Expected output includes:
+# TcpTestSucceeded : True</code></pre>
+
+      <h4>DNS Resolution Check</h4>
+      <pre><code># PowerShell
+Resolve-DnsName your-domain.okta.com
+
+# Or using nslookup
+nslookup your-domain.okta.com</code></pre>
+
+      <h4>Test HTTPS Connection with Details</h4>
+      <pre><code># PowerShell
+$response = Invoke-WebRequest -Uri "https://your-domain.okta.com/.well-known/okta-organization" -UseBasicParsing
+$response.StatusCode  # Should return 200
+
+# Curl alternative
+curl -I https://your-domain.okta.com</code></pre>
+
+      <h3>Okta Verify Application</h3>
+
+      <h4>Check Installed Version</h4>
+      <pre><code># PowerShell
+Get-ItemProperty "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*" |
+  Where-Object {$_.DisplayName -like "*Okta Verify*"} |
+  Select-Object DisplayName, DisplayVersion, InstallDate</code></pre>
+
+      <h4>Find Installation Path</h4>
+      <pre><code># PowerShell
+Get-ItemProperty "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*" |
+  Where-Object {$_.DisplayName -like "*Okta Verify*"} |
+  Select-Object InstallLocation</code></pre>
+
+      <h4>Check Running Processes</h4>
+      <pre><code># PowerShell
+Get-Process | Where-Object {$_.ProcessName -like "*Okta*"} |
+  Select-Object ProcessName, Id, StartTime, Path</code></pre>
+
+      <h2>macOS Diagnostic Commands</h2>
+
+      <h3>Configuration Profiles</h3>
+
+      <h4>List All Installed Profiles</h4>
+      <pre><code># Terminal
+sudo profiles -L
+
+# Filter for Okta profiles
+sudo profiles -L | grep -i okta</code></pre>
+
+      <h4>View Full Profile Configuration</h4>
+      <pre><code># Terminal
+sudo profiles show
+
+# View specific profile
+sudo profiles show -type configuration</code></pre>
+
+      <h4>Check Okta Verify Preferences</h4>
+      <pre><code># Terminal
+defaults read com.okta.OktaVerify
+
+# Check specific keys
+defaults read com.okta.OktaVerify OrgUrl
+defaults read com.okta.OktaVerify EnableDesktopAuth
+defaults read com.okta.OktaVerify EnabledFactors</code></pre>
+
+      <h4>Verify Profile Installation Status</h4>
+      <pre><code># Terminal
+sudo profiles status
+
+# Check MDM enrollment
+sudo profiles show -type enrollment</code></pre>
+
+      <h3>Platform SSO Extension</h3>
+
+      <h4>Check Platform SSO Status</h4>
+      <pre><code># Terminal
+app-sso platform -s
+
+# Expected output for registered device:
+# Platform SSO: Registered</code></pre>
+
+      <h4>List SSO Keys</h4>
+      <pre><code># Terminal
+app-sso platform -l
+
+# Shows keys stored in Secure Enclave</code></pre>
+
+      <h4>View SSO Configuration</h4>
+      <pre><code># Terminal
+app-sso config -l
+
+# Shows configured SSO extensions</code></pre>
+
+      <h3>System Extensions</h3>
+
+      <h4>List System Extensions</h4>
+      <pre><code># Terminal
+systemextensionsctl list
+
+# Filter for Okta
+systemextensionsctl list | grep -i okta</code></pre>
+
+      <h4>Check Extension Status</h4>
+      <pre><code># Terminal
+# View system extension info
+system_profiler SPExtensionsDataType | grep -A 10 -i okta</code></pre>
+
+      <h3>Console Logs</h3>
+
+      <h4>View Recent Okta Verify Logs</h4>
+      <pre><code># Terminal
+log show --predicate 'subsystem == "com.okta.OktaVerify"' --last 30m --info
+
+# View with timestamps
+log show --predicate 'subsystem == "com.okta.OktaVerify"' --last 30m --style compact</code></pre>
+
+      <h4>Filter for Errors Only</h4>
+      <pre><code># Terminal
+log show --predicate 'subsystem == "com.okta.OktaVerify" AND messageType == "Error"' --last 1h</code></pre>
+
+      <h4>Monitor Logs in Real-Time</h4>
+      <pre><code># Terminal
+log stream --predicate 'subsystem == "com.okta.OktaVerify"' --level info</code></pre>
+
+      <h4>Export Logs to File</h4>
+      <pre><code># Terminal
+log show --predicate 'subsystem == "com.okta.OktaVerify"' --last 1h > ~/Desktop/okta-logs.txt</code></pre>
+
+      <h4>Search for Specific Events</h4>
+      <pre><code># Registration events
+log show --predicate 'subsystem == "com.okta.OktaVerify" AND message CONTAINS "registration"' --last 1h
+
+# Authentication events
+log show --predicate 'subsystem == "com.okta.OktaVerify" AND message CONTAINS "authentication"' --last 30m
+
+# FastPass events
+log show --predicate 'subsystem == "com.okta.OktaVerify" AND message CONTAINS "FastPass"' --last 30m</code></pre>
+
+      <h4>Platform SSO Logs</h4>
+      <pre><code># Terminal
+log show --predicate 'subsystem == "com.apple.AppSSO"' --last 30m
+
+# Filter for authentication events
+log show --predicate 'subsystem == "com.apple.AppSSO" AND message CONTAINS "auth"' --last 1h</code></pre>
+
+      <h3>Network Connectivity</h3>
+
+      <h4>Test Okta Domain Connectivity</h4>
+      <pre><code># Terminal
+ping -c 4 your-domain.okta.com
+
+# DNS lookup
+nslookup your-domain.okta.com</code></pre>
+
+      <h4>Test HTTPS Connection</h4>
+      <pre><code># Terminal
+curl -I https://your-domain.okta.com
+
+# Verbose output with timing
+curl -v https://your-domain.okta.com/.well-known/okta-organization</code></pre>
+
+      <h4>Check Proxy Settings</h4>
+      <pre><code># Terminal
+networksetup -getwebproxy Wi-Fi
+networksetup -getsecurewebproxy Wi-Fi</code></pre>
+
+      <h3>Okta Verify Application</h3>
+
+      <h4>Check Installation</h4>
+      <pre><code># Terminal
+ls -la /Applications/Okta\ Verify.app
+
+# Check version
+defaults read /Applications/Okta\ Verify.app/Contents/Info.plist CFBundleShortVersionString</code></pre>
+
+      <h4>Check Running Processes</h4>
+      <pre><code># Terminal
+ps aux | grep -i okta
+
+# More detailed process info
+pgrep -lf Okta</code></pre>
+
+      <h4>View Application Info</h4>
+      <pre><code># Terminal
+system_profiler SPApplicationsDataType | grep -A 10 "Okta Verify"</code></pre>
+
+      <h2>Log File Locations</h2>
+
+      <h3>Windows Log Paths</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Log Type</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Location</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Contents</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Okta Verify Event Log</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Event Viewer → Applications and Services Logs → Okta Verify</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Registration, authentication, service events</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Application Logs</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>%LOCALAPPDATA%\\Okta\\Okta Verify\\logs</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Detailed application logs</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Service Logs</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>%ProgramData%\\Okta\\Okta Verify\\logs</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Service-level operations</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>System Event Log</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Event Viewer → Windows Logs → System</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Service start/stop, system-level errors</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Application Event Log</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Event Viewer → Windows Logs → Application</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Application crashes, errors</td>
+        </tr>
+      </table>
+
+      <h3>macOS Log Paths</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Log Type</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Access Method</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Contents</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Okta Verify Logs</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Console.app → Search for "OktaVerify"</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">All Okta Verify application events</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Unified Logs</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>log show</code> command</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">System-wide logging subsystem</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Platform SSO Logs</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Console.app → Search for "AppSSO"</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Platform SSO extension events</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>System Logs</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>/var/log/system.log</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">General system events (older macOS)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Install Logs</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;"><code>/var/log/install.log</code></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Package installation events</td>
+        </tr>
+      </table>
+
+      <h2>Common Diagnostic Scenarios</h2>
+
+      <h3>Scenario 1: Registration Fails</h3>
+
+      <div class="diagnostic-scenario">
+        <h4>Step 1: Verify Configuration</h4>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Get-ItemProperty "HKLM:\\SOFTWARE\\Okta\\Okta Verify" | Format-List</code></pre>
+        <p><strong>macOS:</strong></p>
+        <pre><code>defaults read com.okta.OktaVerify
+sudo profiles -L | grep -i okta</code></pre>
+
+        <h4>Step 2: Check Network Connectivity</h4>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Test-NetConnection your-domain.okta.com -Port 443</code></pre>
+        <p><strong>macOS:</strong></p>
+        <pre><code>curl -I https://your-domain.okta.com</code></pre>
+
+        <h4>Step 3: Review Logs</h4>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Get-WinEvent -LogName "Okta Verify" | Where-Object {$_.Message -like "*registration*"} | Select-Object TimeCreated, Message</code></pre>
+        <p><strong>macOS:</strong></p>
+        <pre><code>log show --predicate 'subsystem == "com.okta.OktaVerify" AND message CONTAINS "registration"' --last 30m</code></pre>
+
+        <h4>Step 4: Restart Service/Application</h4>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Restart-Service OktaVerify</code></pre>
+        <p><strong>macOS:</strong></p>
+        <pre><code>killall "Okta Verify"
+open -a "Okta Verify"</code></pre>
+      </div>
+
+      <h3>Scenario 2: Authentication Fails</h3>
+
+      <div class="diagnostic-scenario">
+        <h4>Step 1: Verify Service Status</h4>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Get-Service OktaVerify</code></pre>
+        <p><strong>macOS:</strong></p>
+        <pre><code>ps aux | grep -i "Okta Verify"</code></pre>
+
+        <h4>Step 2: Check Desktop Auth Configuration</h4>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Get-ItemPropertyValue "HKLM:\\SOFTWARE\\Okta\\Okta Verify" -Name "EnableDesktopAuth"</code></pre>
+        <p><strong>macOS:</strong></p>
+        <pre><code>defaults read com.okta.OktaVerify EnableDesktopAuth</code></pre>
+
+        <h4>Step 3: Review Authentication Logs</h4>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Get-WinEvent -LogName "Okta Verify" | Where-Object {$_.Message -like "*auth*"} | Select-Object TimeCreated, LevelDisplayName, Message</code></pre>
+        <p><strong>macOS:</strong></p>
+        <pre><code>log show --predicate 'subsystem == "com.okta.OktaVerify" AND message CONTAINS "auth"' --last 1h</code></pre>
+
+        <h4>Step 4: Test Network Connection</h4>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Test-NetConnection your-domain.okta.com -Port 443
+Invoke-WebRequest -Uri "https://your-domain.okta.com/.well-known/okta-organization"</code></pre>
+        <p><strong>macOS:</strong></p>
+        <pre><code>curl -v https://your-domain.okta.com/.well-known/okta-organization</code></pre>
+      </div>
+
+      <h3>Scenario 3: Password Sync Issues</h3>
+
+      <div class="diagnostic-scenario">
+        <h4>Step 1: Verify Password Sync Enabled</h4>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Get-ItemPropertyValue "HKLM:\\SOFTWARE\\Okta\\Okta Verify" -Name "EnablePasswordSync"</code></pre>
+        <p><strong>macOS:</strong></p>
+        <pre><code>defaults read com.okta.OktaVerify EnablePasswordSync</code></pre>
+
+        <h4>Step 2: Check for Sync Errors</h4>
+        <p><strong>Windows:</strong></p>
+        <pre><code>Get-WinEvent -LogName "Okta Verify" | Where-Object {$_.Message -like "*password*" -or $_.Message -like "*sync*"}</code></pre>
+        <p><strong>macOS:</strong></p>
+        <pre><code>log show --predicate 'subsystem == "com.okta.OktaVerify" AND (message CONTAINS "password" OR message CONTAINS "sync")' --last 1h</code></pre>
+
+        <h4>Step 3: Verify Network Connectivity</h4>
+        <p><strong>Both platforms:</strong></p>
+        <pre><code># Test connection during password change
+# Monitor logs in real-time during password sync attempt</code></pre>
+      </div>
+
+      <h2>Quick Fixes</h2>
+
+      <h3>Restart Okta Verify Service</h3>
+
+      <div class="quick-fix">
+        <p><strong>Windows:</strong></p>
+        <pre><code># PowerShell (as Administrator)
+Restart-Service OktaVerify
+
+# Alternative: Services management console
+services.msc
+# Find "Okta Verify" → Right-click → Restart</code></pre>
+
+        <p><strong>macOS:</strong></p>
+        <pre><code># Terminal
+killall "Okta Verify"
+sleep 2
+open -a "Okta Verify"</code></pre>
+      </div>
+
+      <h3>Reinstall Configuration Profile</h3>
+
+      <div class="quick-fix">
+        <p><strong>macOS Only:</strong></p>
+        <pre><code># Remove existing profile
+sudo profiles remove -identifier com.okta.OktaVerify
+
+# Trigger MDM to reinstall (Jamf example)
+sudo jamf policy
+
+# Verify reinstallation
+sudo profiles -L | grep -i okta</code></pre>
+      </div>
+
+      <h3>Clear Okta Verify Cache</h3>
+
+      <div class="quick-fix">
+        <p><strong>Windows:</strong></p>
+        <pre><code># PowerShell (as Administrator)
+Stop-Service OktaVerify
+Remove-Item "$env:LOCALAPPDATA\\Okta\\Okta Verify\\cache\\*" -Recurse -Force
+Start-Service OktaVerify</code></pre>
+
+        <p><strong>macOS:</strong></p>
+        <pre><code># Terminal
+killall "Okta Verify"
+rm -rf ~/Library/Caches/com.okta.OktaVerify
+open -a "Okta Verify"</code></pre>
+      </div>
+
+      <h3>Force MDM Sync</h3>
+
+      <div class="quick-fix">
+        <p><strong>Windows (Intune):</strong></p>
+        <pre><code># Settings → Accounts → Access work or school → [Account] → Info → Sync
+
+# Or via PowerShell
+Get-ScheduledTask | Where-Object {$_.TaskName -like "*Intune*"} | Start-ScheduledTask</code></pre>
+
+        <p><strong>macOS (Jamf):</strong></p>
+        <pre><code># Terminal
+sudo jamf policy
+
+# Or via Self Service app
+# Open Self Service → Check for policies</code></pre>
+      </div>
+
+      <div class="tips-box" style="margin-top: 30px; padding: 20px; background: #fff3cd; border-radius: 8px;">
+        <h3>Pro Tips</h3>
+        <ul>
+          <li><strong>Always run PowerShell as Administrator</strong> on Windows for diagnostic commands</li>
+          <li><strong>Use <code>sudo</code></strong> on macOS for profile and system-level commands</li>
+          <li><strong>Capture logs during reproduction</strong> - Start log monitoring before attempting the failing action</li>
+          <li><strong>Check timestamps</strong> - Ensure log entries align with when the issue occurred</li>
+          <li><strong>Export logs before making changes</strong> - Preserve state for comparison</li>
+          <li><strong>Bookmark this page</strong> - Quick reference when troubleshooting in the field</li>
+          <li><strong>Document your findings</strong> - Note which commands revealed the issue for future reference</li>
+        </ul>
+      </div>
+    `,
+    tags: ['quick-reference', 'troubleshooting', 'commands', 'diagnostics', 'windows', 'macos', 'logs', 'powershell', 'terminal'],
+    source: 'internal',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isRead: false,
+    isStarter: true,
+  },
+  {
+    id: 'se-feature-comparison',
+    title: 'Okta Device Access Feature Comparison Matrix',
+    category: 'quick-reference',
+    content: `
+      <h1>Okta Device Access Feature Comparison Matrix</h1>
+
+      <div class="info-box">
+        <h3>About This Reference</h3>
+        <p>This comprehensive comparison guide helps you understand the differences between Okta Device Access features, platform capabilities, MFA factors, MDM solutions, and deployment approaches. Use this to make informed decisions for your organization's implementation strategy.</p>
+      </div>
+
+      <h2>Desktop MFA vs Password Sync vs FastPass</h2>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Aspect</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Desktop MFA</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Password Sync</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">FastPass</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Authentication Method</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Local password + MFA factor</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Okta password (synced to local)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Passwordless (biometric + cryptographic key)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Password Management</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Separate local and Okta passwords</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Single password (Okta syncs to local)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No passwords required</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>MFA Required</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes (at every login or per policy)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No (unless separate policy requires it)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Biometric serves as MFA</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Platforms Supported</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Windows 10+, macOS 11+</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Windows 10+, macOS 11+</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Windows 10 1809+, macOS 13+ (Platform SSO)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Okta Tenant Required</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Classic or OIE</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Classic or OIE</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">OIE only</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Hardware Requirements</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Mobile device for MFA enrollment</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">None (beyond basic OS requirements)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">TPM 2.0 (Windows) or T2/Apple Silicon (macOS)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Biometric Support</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Optional (can use for approving MFA)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Required (Windows Hello, Touch ID, Face ID)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Offline Access</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes (cached credentials + grace period)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes (local password cached)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes (cryptographic keys cached)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Security Level</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">High (MFA required)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Medium (single password)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Very High (FIDO2 compliant, phishing-resistant)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>User Experience</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Two steps: password + MFA approval</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">One step: password only</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">One step: biometric only</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Deployment Complexity</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Medium</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Low</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Medium-High</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Best For</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Organizations requiring strong MFA without password changes</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Simplifying user experience with unified password</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Zero-trust environments, passwordless initiatives</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>License Cost</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Okta Verify included in Workforce Identity</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Okta Verify included in Workforce Identity</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Requires OIE license</td>
+        </tr>
+      </table>
+
+      <h2>Windows vs macOS Capabilities</h2>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Feature</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Windows</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">macOS</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Notes</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Desktop MFA</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Fully supported</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Fully supported</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Feature parity across platforms</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Password Sync</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Fully supported</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Fully supported</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Feature parity across platforms</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>FastPass</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Via Windows Hello</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Via Touch ID/Face ID</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Platform-specific biometric integration</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Platform SSO</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✗ Not supported</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ macOS 13+ (Ventura)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Apple-exclusive feature</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Credential Provider</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Native integration</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Authorization plugin</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Different OS integration mechanisms</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Secure Key Storage</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">TPM 2.0</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Secure Enclave (T2/Apple Silicon)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Hardware-backed security on both</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>MDM Configuration</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Registry (OMA-URI)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Configuration Profile (plist)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Platform-native config methods</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Offline Duration</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Configurable (days)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Configurable (days)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Same offline capabilities</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>MFA Factors</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Push, TOTP, SMS</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Push, TOTP, SMS</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Same factor support</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Grace Period</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Supported</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Supported</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Configurable on both platforms</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Self-Service Recovery</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Supported</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">✓ Supported</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Recovery PIN available on both</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Deployment Complexity</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Medium (Intune/SCCM)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Medium (Jamf/Intune)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Similar deployment effort</td>
+        </tr>
+      </table>
+
+      <h2>MFA Factor Comparison</h2>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Factor</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Strengths</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Weaknesses</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Best Use Cases</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Offline Support</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Okta Verify Push</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Simple user experience<br/>
+            • Fast authentication<br/>
+            • Number matching for phishing resistance<br/>
+            • Doesn't require typing
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Requires mobile device online<br/>
+            • Network dependent<br/>
+            • Battery drain concern
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Standard corporate users<br/>
+            • Office environments<br/>
+            • Users with reliable connectivity
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Okta Verify TOTP</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Works offline<br/>
+            • No network required<br/>
+            • Industry standard<br/>
+            • Backup when push fails
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Requires typing 6-digit code<br/>
+            • Time-sensitive (30-60 sec window)<br/>
+            • Can be phished
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Offline scenarios<br/>
+            • Backup factor<br/>
+            • Users in low connectivity areas
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>FIDO2/WebAuthn</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Phishing-resistant<br/>
+            • No shared secrets<br/>
+            • Hardware-backed<br/>
+            • Industry standard
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Requires hardware security key<br/>
+            • Additional cost<br/>
+            • Can be lost/forgotten<br/>
+            • Limited offline
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • High-security environments<br/>
+            • Admins and privileged users<br/>
+            • Zero-trust initiatives
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Limited</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>SMS</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Widely accessible<br/>
+            • No app required<br/>
+            • Works on basic phones
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Vulnerable to SIM swapping<br/>
+            • Can be intercepted<br/>
+            • Network dependent<br/>
+            • Not recommended by NIST
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Fallback only<br/>
+            • Users without smartphones<br/>
+            • Low-security requirements
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">No</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>FastPass (Biometric)</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Passwordless<br/>
+            • Phishing-resistant<br/>
+            • Excellent UX<br/>
+            • Hardware-backed<br/>
+            • FIDO2 compliant
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Requires compatible hardware<br/>
+            • Biometric enrollment needed<br/>
+            • OIE tenant required<br/>
+            • Limited fallback options
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Passwordless initiatives<br/>
+            • Modern devices<br/>
+            • Best-in-class security + UX
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Yes (cached)</td>
+        </tr>
+      </table>
+
+      <h2>MDM Solution Comparison</h2>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Aspect</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Jamf Pro</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Microsoft Intune</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Kandji</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Workspace ONE</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Platform Focus</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">macOS, iOS exclusive</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Cross-platform (Windows, macOS, iOS, Android)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">macOS, iOS exclusive</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Cross-platform (all major OS)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Ease of Configuration</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">High (Apple-focused UI)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Medium (complex for beginners)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Very High (modern, intuitive)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Medium (enterprise-focused)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Okta Integration</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Excellent (plist support)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Good (OMA-URI for Windows, plist for macOS)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Excellent (JSON/plist, library items)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Good (custom profiles)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Platform SSO Support</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Excellent</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Good (macOS profiles)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Excellent</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Good</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>App Deployment</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">PKG, App Store apps</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Win32, MSI, macOS PKG</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">PKG, DMG, App Store</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Multi-format support</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Reporting & Analytics</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Excellent (detailed Apple insights)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Excellent (Microsoft ecosystem integration)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Good (modern dashboards)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Excellent (enterprise analytics)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Self-Service Portal</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Jamf Self Service (native app)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Company Portal (web + app)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Self Service (native app)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Workspace ONE Intelligent Hub</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Pricing Model</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Per device/year (premium pricing)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Per user/month (bundled with M365)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Per device/month (competitive)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Per device (enterprise pricing)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Support Quality</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Excellent (Apple experts)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Good (large support org)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Excellent (responsive, modern)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Good (enterprise-tier support)</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Best For</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Apple-only organizations, creative industries</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Microsoft 365 shops, cross-platform needs</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Modern Apple-focused orgs, SMBs</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Large enterprises, diverse device fleets</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Learning Curve</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Low-Medium (Apple admins)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Medium-High (complex UI)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Low (modern, intuitive)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Medium-High (feature-rich)</td>
+        </tr>
+      </table>
+
+      <h2>Deployment Approach Comparison</h2>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Approach</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Pros</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Cons</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Best For</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Timeline</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Big Bang</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Fast implementation<br/>
+            • Everyone on same version<br/>
+            • Simpler project management<br/>
+            • Clear cutover date
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • High risk if issues arise<br/>
+            • Heavy support burden<br/>
+            • Limited rollback options<br/>
+            • All eggs in one basket
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Small organizations (&lt;100 users)<br/>
+            • Homogeneous environment<br/>
+            • Mature IT teams<br/>
+            • Weekend deployment windows
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">1-2 weeks</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Phased Rollout</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Reduced risk<br/>
+            • Learn from each phase<br/>
+            • Manageable support load<br/>
+            • Can adjust between phases
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Longer overall timeline<br/>
+            • Version fragmentation<br/>
+            • Multiple communication waves<br/>
+            • Complexity tracking status
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Medium organizations (100-1000)<br/>
+            • Multiple locations<br/>
+            • Varying device types<br/>
+            • Standard recommendation
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">4-12 weeks</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Pilot Program</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Test in production<br/>
+            • Identify issues early<br/>
+            • Build internal champions<br/>
+            • Refine documentation<br/>
+            • Minimal user impact
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Longest timeline<br/>
+            • Pilot selection crucial<br/>
+            • May delay benefits<br/>
+            • Resource intensive
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Large organizations (1000+)<br/>
+            • Complex environments<br/>
+            • Risk-averse culture<br/>
+            • First Okta deployment
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">12-24 weeks</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Opt-In/Voluntary</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • User choice empowerment<br/>
+            • Enthusiasts first<br/>
+            • Organic adoption<br/>
+            • Lower resistance
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Slow adoption<br/>
+            • May never reach 100%<br/>
+            • Fragmented state<br/>
+            • Difficult to mandate later
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Optional security features<br/>
+            • Cultural fit organizations<br/>
+            • Non-critical deployments<br/>
+            • Feature testing
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Ongoing</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Department by Department</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Clear boundaries<br/>
+            • Department-specific support<br/>
+            • Targeted communications<br/>
+            • Easier to manage
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Political challenges<br/>
+            • Who goes first?<br/>
+            • Department dependencies<br/>
+            • Uneven timeline
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">
+            • Organizations with distinct departments<br/>
+            • Decentralized IT<br/>
+            • Varying security requirements
+          </td>
+          <td style="padding: 10px; border: 1px solid #ddd;">8-16 weeks</td>
+        </tr>
+      </table>
+
+      <h3>Recommended Deployment Strategy by Organization Size</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f0f0f0;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Organization Size</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Recommended Approach</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Phases</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Key Considerations</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>&lt;100 users</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Big Bang or Small Pilot + Rollout</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Pilot (10-20 users) → Full deployment</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Quick wins, limited resources, direct communication possible</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>100-500 users</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Phased Rollout</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Pilot (20) → Phase 1 (20%) → Phase 2 (30%) → Phase 3 (50%)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Balance speed and risk, learn between phases</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>500-2000 users</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Pilot + Phased Rollout</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Pilot (50) → Early Adopters (10%) → 4-6 phases</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Multiple locations, diverse devices, structured approach</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>2000+ users</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Extended Pilot + Phased</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Pilot (100) → Early Adopters (5%) → 6-10 phases by department/location</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Complex environment, change management critical, detailed planning</td>
+        </tr>
+      </table>
+
+      <div class="decision-guide" style="margin-top: 30px; padding: 20px; background: #e3f2fd; border-radius: 8px;">
+        <h3>Decision Guide: Which Feature Should You Deploy?</h3>
+
+        <h4>Choose Desktop MFA if:</h4>
+        <ul>
+          <li>You need strong MFA at desktop login</li>
+          <li>You're comfortable managing separate local and Okta passwords</li>
+          <li>You're on Okta Classic or OIE</li>
+          <li>Users have mobile devices for MFA enrollment</li>
+        </ul>
+
+        <h4>Choose Password Sync if:</h4>
+        <ul>
+          <li>You want to simplify user experience with one password</li>
+          <li>MFA at every desktop login is too disruptive</li>
+          <li>You have password policies enforced in Okta</li>
+          <li>You're not ready for passwordless</li>
+        </ul>
+
+        <h4>Choose FastPass if:</h4>
+        <ul>
+          <li>You're pursuing passwordless authentication</li>
+          <li>You have OIE tenant</li>
+          <li>Devices support biometrics (Windows Hello, Touch ID, Face ID)</li>
+          <li>You want phishing-resistant authentication</li>
+          <li>Best security and UX is priority</li>
+        </ul>
+
+        <h4>Choose Platform SSO (macOS) if:</h4>
+        <ul>
+          <li>You're deploying on macOS 13+</li>
+          <li>You want native Apple integration</li>
+          <li>You need Okta password to unlock macOS</li>
+          <li>You want seamless SSO to apps</li>
+        </ul>
+      </div>
+    `,
+    tags: ['quick-reference', 'comparison', 'features', 'mdm', 'deployment', 'planning', 'decision-guide'],
+    source: 'internal',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isRead: false,
+    isStarter: true,
+  },
+  {
+    id: 'se-email-templates',
+    title: 'Email Templates for Okta Device Access Sales',
+    category: 'sales-tools',
+    content: `
+      <h2>Overview</h2>
+      <p>This collection of email templates helps Solution Engineers communicate effectively throughout the sales cycle. Customize these templates based on your prospect's specific needs, industry, and pain points.</p>
+
+      <h2>1. POC Proposal Email</h2>
+
+      <div class="email-template" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Subject:</strong> Proof of Concept Proposal - Okta Device Access for [Company Name]</p>
+
+        <p>Hi [First Name],</p>
+
+        <p>Thank you for your time on our recent call. Based on our discussion about [specific pain points: password reset tickets, lack of MFA at endpoint, etc.], I believe a Proof of Concept would be valuable to demonstrate how Okta Device Access can address these challenges.</p>
+
+        <p><strong>Proposed POC Scope:</strong></p>
+        <ul>
+          <li><strong>Duration:</strong> 2-4 weeks</li>
+          <li><strong>Pilot Group:</strong> 10-20 users (IT team or early adopters)</li>
+          <li><strong>Features to Test:</strong>
+            <ul>
+              <li>Desktop MFA for Windows/macOS login</li>
+              <li>[FastPass passwordless authentication - if applicable]</li>
+              <li>[Password Sync - if applicable]</li>
+            </ul>
+          </li>
+          <li><strong>Success Criteria:</strong>
+            <ul>
+              <li>Successful enrollment of pilot users</li>
+              <li>MFA enforcement at device login</li>
+              <li>User feedback on experience</li>
+              <li>Integration with [their MDM solution]</li>
+            </ul>
+          </li>
+        </ul>
+
+        <p><strong>Value Proposition:</strong></p>
+        <ul>
+          <li>Reduce password reset tickets by up to 50% with Password Sync</li>
+          <li>Enforce MFA at the most critical access point - the device itself</li>
+          <li>Improve user experience with passwordless FastPass authentication</li>
+          <li>Gain visibility into device security posture</li>
+        </ul>
+
+        <p><strong>Next Steps:</strong></p>
+        <ol>
+          <li>Review and approve POC scope</li>
+          <li>Identify pilot user group</li>
+          <li>Schedule kickoff meeting (1 hour)</li>
+          <li>Okta provisions trial tenant</li>
+        </ol>
+
+        <p>Are you available next [day/time] to discuss the POC plan and answer any questions?</p>
+
+        <p>Best regards,<br/>
+        [Your Name]<br/>
+        [Title]<br/>
+        [Contact Info]</p>
+      </div>
+
+      <h2>2. Technical Follow-up Email</h2>
+
+      <div class="email-template" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Subject:</strong> Follow-up: Okta Device Access Demo & Technical Details</p>
+
+        <p>Hi [First Name],</p>
+
+        <p>Thank you for attending today's demonstration of Okta Device Access. I wanted to recap what we covered and provide the technical resources you requested.</p>
+
+        <p><strong>Demo Summary:</strong></p>
+        <ul>
+          <li>Desktop MFA with Okta Verify - Showed how users authenticate at Windows/macOS login with biometrics</li>
+          <li>FastPass Passwordless - Demonstrated phishing-resistant authentication flow</li>
+          <li>MDM Integration - Walked through [Jamf/Intune] configuration and policy deployment</li>
+          <li>Admin Experience - Reviewed policy configuration and reporting dashboards</li>
+        </ul>
+
+        <p><strong>Addressing Your Questions:</strong></p>
+        <ul>
+          <li><strong>Q: How does this work with our existing AD/Azure AD?</strong><br/>
+          A: Okta integrates via LDAP/AD connector or Azure AD integration. User identities remain in your existing directory.</li>
+
+          <li><strong>Q: What happens if a user loses their phone?</strong><br/>
+          A: Users can authenticate with backup factors (SMS, email, or help desk can reset). We can also configure offline access policies.</li>
+
+          <li><strong>Q: Can we enforce device compliance checks?</strong><br/>
+          A: Yes, Okta integrates with your MDM to verify disk encryption, OS version, and other compliance attributes before granting access.</li>
+        </ul>
+
+        <p><strong>Resources:</strong></p>
+        <ul>
+          <li><a href="#">Okta Device Access Technical Overview (PDF)</a></li>
+          <li><a href="#">Deployment Guide for [Jamf/Intune]</a></li>
+          <li><a href="#">Architecture Diagram</a></li>
+          <li><a href="#">Security & Compliance Whitepaper</a></li>
+        </ul>
+
+        <p><strong>Next Steps:</strong></p>
+        <ol>
+          <li>Share these materials with your security and IT teams</li>
+          <li>Schedule follow-up with technical stakeholders (if needed)</li>
+          <li>Discuss POC timeline and scope</li>
+        </ol>
+
+        <p>I'm available [day/time] if you'd like to dive deeper into any specific area. What works best for your schedule?</p>
+
+        <p>Best regards,<br/>
+        [Your Name]</p>
+      </div>
+
+      <h2>3. Executive Summary Email</h2>
+
+      <div class="email-template" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Subject:</strong> Executive Summary: Okta Device Access Business Value for [Company Name]</p>
+
+        <p>Hi [Executive Name],</p>
+
+        <p>I've been working with [First Name] and [their team] on Okta Device Access. I wanted to share a brief executive summary of the business value and outcomes we can deliver for [Company Name].</p>
+
+        <p><strong>Business Challenge:</strong></p>
+        <p>[Company Name] is experiencing [specific challenges: high password reset volume, endpoint security gaps, compliance requirements, user friction, etc.]. This impacts productivity, security posture, and operational costs.</p>
+
+        <p><strong>Okta Device Access Solution:</strong></p>
+        <ul>
+          <li><strong>Enhanced Security:</strong> MFA at device login, phishing-resistant authentication, device trust verification</li>
+          <li><strong>Improved User Experience:</strong> Single password (or passwordless), biometric authentication, seamless access</li>
+          <li><strong>Operational Efficiency:</strong> Reduce help desk tickets, automate provisioning, centralized management</li>
+        </ul>
+
+        <p><strong>Expected ROI:</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+          <tr style="background: #e3f2fd;">
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Metric</th>
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Current State</th>
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">With Okta</th>
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Annual Savings</th>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Password Reset Tickets</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">[X] tickets/month</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">50% reduction</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">$[amount]</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Time Saved per User</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">5 min/day</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Single sign-on</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">$[amount]</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">Security Incidents</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Phishing risk</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Phishing-resistant</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">Risk mitigation</td>
+          </tr>
+        </table>
+
+        <p><strong>Customer Success Stories:</strong></p>
+        <ul>
+          <li><strong>[Similar Company/Industry]:</strong> Reduced password-related tickets by 60%, achieved SOC2 compliance</li>
+          <li><strong>[Another Reference]:</strong> Deployed to 5,000 users in 8 weeks, 95% user satisfaction</li>
+        </ul>
+
+        <p><strong>Recommended Next Step:</strong></p>
+        <p>I'd like to schedule a brief 30-minute executive briefing to discuss how Okta Device Access aligns with [Company Name]'s strategic security and productivity initiatives.</p>
+
+        <p>Would you have time in the next week or two?</p>
+
+        <p>Best regards,<br/>
+        [Your Name]<br/>
+        [Title]</p>
+      </div>
+
+      <h2>4. Trial Extension Request Email</h2>
+
+      <div class="email-template" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Subject:</strong> Request: POC Extension for Okta Device Access</p>
+
+        <p>Hi [First Name],</p>
+
+        <p>I wanted to check in on the Okta Device Access POC progress. I see your trial is scheduled to end on [date], and I'd like to discuss extending it to ensure you can fully evaluate the solution.</p>
+
+        <p><strong>Progress to Date:</strong></p>
+        <ul>
+          <li>[X] users successfully enrolled</li>
+          <li>Desktop MFA tested on [Windows/macOS]</li>
+          <li>[Feature] successfully configured and tested</li>
+          <li>Positive feedback from pilot users</li>
+        </ul>
+
+        <p><strong>Rationale for Extension:</strong></p>
+        <p>Based on our recent conversations, I understand you'd like to:</p>
+        <ul>
+          <li>Test with additional user groups in [department/location]</li>
+          <li>Evaluate [specific feature] that wasn't in the initial scope</li>
+          <li>Run parallel testing with [competing solution/current tool]</li>
+          <li>Conduct security review with your [InfoSec/compliance] team</li>
+        </ul>
+
+        <p><strong>Proposed Extension:</strong></p>
+        <ul>
+          <li><strong>Additional Time:</strong> [2-4] weeks</li>
+          <li><strong>New End Date:</strong> [date]</li>
+          <li><strong>Additional Goals:</strong>
+            <ul>
+              <li>[Specific objective 1]</li>
+              <li>[Specific objective 2]</li>
+              <li>[Specific objective 3]</li>
+            </ul>
+          </li>
+        </ul>
+
+        <p>I can process the extension request today if this timeline works for you. Let me know if you need any additional support or resources during the extended trial.</p>
+
+        <p>Best regards,<br/>
+        [Your Name]</p>
+      </div>
+
+      <h2>5. Post-Demo Follow-up Email</h2>
+
+      <div class="email-template" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Subject:</strong> Thanks for Your Time - Okta Device Access Demo Recap</p>
+
+        <p>Hi [First Name],</p>
+
+        <p>Thank you for your time today! I enjoyed walking through how Okta Device Access can help [Company Name] achieve [specific goals discussed].</p>
+
+        <p><strong>What We Covered:</strong></p>
+        <ul>
+          <li>Your current challenges with [pain points]</li>
+          <li>How Desktop MFA works with [Windows/macOS]</li>
+          <li>FastPass passwordless authentication [if applicable]</li>
+          <li>Integration with your [MDM solution]</li>
+          <li>Deployment approach for [X users]</li>
+        </ul>
+
+        <p><strong>Key Takeaways:</strong></p>
+        <ul>
+          <li>Okta Device Access extends your existing Okta investment to the device layer</li>
+          <li>You can reduce password-related friction while improving security</li>
+          <li>Deployment can be phased starting with [suggested pilot group]</li>
+          <li>Integration with [their MDM] is straightforward using [method]</li>
+        </ul>
+
+        <p><strong>Addressing Your Questions:</strong></p>
+        <ul>
+          <li><strong>Offline access:</strong> Users can cache credentials for offline authentication (configurable duration)</li>
+          <li><strong>User migration:</strong> We can migrate users gradually without impacting current workflows</li>
+          <li><strong>Support requirements:</strong> Minimal ongoing support; most common issue is forgotten passwords (which decreases over time)</li>
+        </ul>
+
+        <p><strong>Next Actions:</strong></p>
+        <ol>
+          <li>I'll send over the [technical documentation/architecture diagram] you requested</li>
+          <li>Review with your team and identify any additional questions</li>
+          <li>Schedule follow-up to discuss POC or next steps</li>
+        </ol>
+
+        <p>What's the best next step from your perspective? I'm happy to schedule a technical deep-dive, prepare a POC proposal, or connect you with a reference customer.</p>
+
+        <p>Best regards,<br/>
+        [Your Name]</p>
+      </div>
+
+      <h2>6. Objection Response Email Templates</h2>
+
+      <h3>Objection: "This seems expensive"</h3>
+
+      <div class="email-template" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Subject:</strong> Re: Okta Device Access Pricing & ROI</p>
+
+        <p>Hi [First Name],</p>
+
+        <p>I appreciate you being candid about budget concerns. Let me break down the value and ROI to help frame the investment.</p>
+
+        <p><strong>Cost Breakdown:</strong></p>
+        <ul>
+          <li>Okta Device Access: $[X] per user/year</li>
+          <li>Part of broader Okta Workforce Identity solution</li>
+          <li>Includes Okta Verify, Desktop MFA, FastPass, Password Sync</li>
+        </ul>
+
+        <p><strong>ROI Analysis:</strong></p>
+        <ul>
+          <li><strong>Help Desk Savings:</strong> 50% reduction in password resets = $[X]/year</li>
+          <li><strong>Productivity Gains:</strong> 5 min/user/day saved = $[X]/year</li>
+          <li><strong>Security Risk Mitigation:</strong> Phishing-resistant MFA reduces breach risk</li>
+          <li><strong>Compliance:</strong> Meet MFA requirements for [SOC2/HIPAA/etc.]</li>
+        </ul>
+
+        <p><strong>Typical Payback Period:</strong> 6-12 months for most customers</p>
+
+        <p>Would it be helpful to build a custom ROI model based on your specific metrics? I can work with you to quantify the business case.</p>
+
+        <p>Best regards,<br/>
+        [Your Name]</p>
+      </div>
+
+      <h3>Objection: "We already have MFA"</h3>
+
+      <div class="email-template" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Subject:</strong> Re: Extending MFA to the Device Layer</p>
+
+        <p>Hi [First Name],</p>
+
+        <p>That's great that you have MFA for applications! Many of our customers were in the same position. Here's what they found:</p>
+
+        <p><strong>The Gap:</strong></p>
+        <p>Most organizations have MFA for cloud apps and VPN, but the device login itself often remains unprotected with just a password. This creates a significant vulnerability:</p>
+        <ul>
+          <li>Stolen credentials can access the device</li>
+          <li>Local applications and data are accessible without MFA</li>
+          <li>Device is the gateway to everything else</li>
+        </ul>
+
+        <p><strong>What Okta Device Access Adds:</strong></p>
+        <ul>
+          <li>MFA at the device login screen (Windows/macOS)</li>
+          <li>Phishing-resistant FastPass authentication</li>
+          <li>Device trust signals integrated with your existing Okta policies</li>
+          <li>Unified authentication experience across device and apps</li>
+        </ul>
+
+        <p><strong>Think of it this way:</strong> You lock the front door to your house (device) and the rooms inside (apps). Okta Device Access ensures both are protected.</p>
+
+        <p>Would you be open to a brief call to discuss how this complements your existing MFA strategy?</p>
+
+        <p>Best regards,<br/>
+        [Your Name]</p>
+      </div>
+
+      <h3>Objection: "Too complex to deploy"</h3>
+
+      <div class="email-template" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Subject:</strong> Re: Okta Device Access Deployment Simplicity</p>
+
+        <p>Hi [First Name],</p>
+
+        <p>I understand deployment complexity is a concern. Let me share how straightforward this actually is, especially with your existing [MDM solution].</p>
+
+        <p><strong>Deployment Overview:</strong></p>
+        <ol>
+          <li><strong>Configure Okta Policies</strong> (1-2 hours) - Set up authentication and MFA policies in Okta admin console</li>
+          <li><strong>Deploy via MDM</strong> (1 hour) - Push Okta Verify configuration via [Jamf/Intune/etc.]</li>
+          <li><strong>Pilot Testing</strong> (1-2 weeks) - Test with 10-20 users</li>
+          <li><strong>Phased Rollout</strong> (4-8 weeks) - Gradually deploy to all users</li>
+        </ol>
+
+        <p><strong>What Makes It Easy:</strong></p>
+        <ul>
+          <li>No changes to Active Directory or domain controllers</li>
+          <li>Leverages your existing MDM for deployment</li>
+          <li>Users enroll themselves (guided experience)</li>
+          <li>Okta provides deployment guides and best practices</li>
+          <li>I'll be with you every step of the way</li>
+        </ul>
+
+        <p><strong>Customer Example:</strong></p>
+        <p>[Similar Company] deployed to 2,000 users in 6 weeks with a team of 2 IT admins. They reported it was easier than expected.</p>
+
+        <p>Would a technical walkthrough of the deployment process help address your concerns?</p>
+
+        <p>Best regards,<br/>
+        [Your Name]</p>
+      </div>
+
+      <h2>7. Reference Request Email</h2>
+
+      <div class="email-template" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Subject:</strong> Customer Reference for Okta Device Access</p>
+
+        <p>Hi [First Name],</p>
+
+        <p>Based on our conversation, I think it would be valuable for you to hear directly from a customer who has successfully deployed Okta Device Access in a similar environment.</p>
+
+        <p><strong>Suggested Reference:</strong></p>
+        <ul>
+          <li><strong>Company:</strong> [Company Name]</li>
+          <li><strong>Industry:</strong> [Similar industry]</li>
+          <li><strong>Size:</strong> [Similar user count]</li>
+          <li><strong>Environment:</strong> [Similar tech stack - MDM, devices, etc.]</li>
+          <li><strong>Use Case:</strong> [Similar challenges they solved]</li>
+        </ul>
+
+        <p><strong>What They Achieved:</strong></p>
+        <ul>
+          <li>Deployed to [X] users in [Y] weeks</li>
+          <li>Reduced password reset tickets by [X]%</li>
+          <li>Achieved [compliance requirement]</li>
+          <li>[Other relevant metrics]</li>
+        </ul>
+
+        <p><strong>Discussion Topics:</strong></p>
+        <p>You can ask them about:</p>
+        <ul>
+          <li>Deployment process and challenges</li>
+          <li>User adoption and feedback</li>
+          <li>Integration with [their MDM/environment]</li>
+          <li>Ongoing management and support</li>
+          <li>ROI and business impact</li>
+        </ul>
+
+        <p>I'll coordinate the introduction if you're interested. Would a 30-minute call work for you?</p>
+
+        <p>Best regards,<br/>
+        [Your Name]</p>
+      </div>
+
+      <h2>8. Contract Renewal Email</h2>
+
+      <div class="email-template" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Subject:</strong> Okta Device Access Renewal & Expansion Opportunities</p>
+
+        <p>Hi [First Name],</p>
+
+        <p>I wanted to reach out as your Okta Device Access contract is coming up for renewal on [date]. I've been reviewing your usage and success metrics, and wanted to share some highlights.</p>
+
+        <p><strong>Your Success Over the Past Year:</strong></p>
+        <ul>
+          <li><strong>Users Enrolled:</strong> [X] users actively using Desktop MFA/FastPass</li>
+          <li><strong>Authentication Events:</strong> [X] successful device logins</li>
+          <li><strong>Help Desk Impact:</strong> [X]% reduction in password reset tickets</li>
+          <li><strong>Security Posture:</strong> MFA enforced at device layer across your fleet</li>
+        </ul>
+
+        <p><strong>Renewal Details:</strong></p>
+        <ul>
+          <li><strong>Current License Count:</strong> [X] users</li>
+          <li><strong>Renewal Date:</strong> [date]</li>
+          <li><strong>Renewal Options:</strong> 1-year, 2-year, or 3-year terms (discounts available for multi-year)</li>
+        </ul>
+
+        <p><strong>Expansion Opportunities:</strong></p>
+        <p>Based on your current deployment, here are some areas to consider:</p>
+        <ul>
+          <li><strong>Additional Users:</strong> Expand from [current] to [target] users</li>
+          <li><strong>Additional Features:</strong> [FastPass upgrade, Platform SSO for macOS, etc.]</li>
+          <li><strong>Additional Platforms:</strong> [Extend to contractors, Linux devices, etc.]</li>
+        </ul>
+
+        <p><strong>New Capabilities Since You Purchased:</strong></p>
+        <ul>
+          <li>[New feature 1] - [Brief description and value]</li>
+          <li>[New feature 2] - [Brief description and value]</li>
+          <li>[Integration update] - [Brief description]</li>
+        </ul>
+
+        <p>I'd like to schedule time to review your renewal and discuss how we can continue to deliver value. Are you available next week for a brief call?</p>
+
+        <p>Best regards,<br/>
+        [Your Name]</p>
+      </div>
+
+      <h2>Email Best Practices</h2>
+
+      <div class="best-practices" style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>General Guidelines</h3>
+        <ul>
+          <li><strong>Personalize:</strong> Always customize with specific details from your conversations</li>
+          <li><strong>Be Concise:</strong> Busy executives appreciate brevity; technical folks may want more detail</li>
+          <li><strong>Clear Call to Action:</strong> Every email should have a clear next step</li>
+          <li><strong>Timing:</strong> Follow up within 24 hours of meetings; send mid-week (Tue-Thu) for best response</li>
+          <li><strong>Subject Lines:</strong> Be specific and action-oriented</li>
+          <li><strong>Formatting:</strong> Use bullet points, bold key items, keep paragraphs short</li>
+          <li><strong>Value First:</strong> Lead with value and outcomes, not features</li>
+          <li><strong>Proof Points:</strong> Include customer examples, metrics, and case studies when relevant</li>
+          <li><strong>Response Path:</strong> Make it easy to respond (specific questions, suggested times, simple yes/no)</li>
+        </ul>
+
+        <h3>Email Cadence</h3>
+        <ul>
+          <li><strong>After Demo:</strong> Same day or within 24 hours</li>
+          <li><strong>After POC Kickoff:</strong> Weekly check-ins</li>
+          <li><strong>After POC Completion:</strong> Within 48 hours with results summary</li>
+          <li><strong>Follow-up if No Response:</strong> Wait 3-5 business days, then send brief follow-up</li>
+          <li><strong>Executive Summary:</strong> After technical validation is complete</li>
+        </ul>
+
+        <h3>What to Avoid</h3>
+        <ul>
+          <li>Don't send generic templated emails without customization</li>
+          <li>Don't overwhelm with too much technical jargon (match their level)</li>
+          <li>Don't include too many attachments (send links instead)</li>
+          <li>Don't write novels (keep under 300 words when possible)</li>
+          <li>Don't be pushy or aggressive in tone</li>
+          <li>Don't forget to proofread (typos undermine credibility)</li>
+        </ul>
+      </div>
+    `,
+    tags: ['sales-tools', 'email-templates', 'communication', 'poc', 'objection-handling', 'follow-up', 'best-practices'],
+    source: 'internal',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isRead: false,
+    isStarter: true,
+  },
+  {
+    id: 'se-presentation-guide',
+    title: 'Presentation Deck Guide for Okta Device Access',
+    category: 'sales-tools',
+    content: `
+      <h2>Overview</h2>
+      <p>This guide helps Solution Engineers create and deliver effective presentations for different audiences and stages of the sales cycle. Choose the right deck structure based on your audience and objectives.</p>
+
+      <h2>1. Executive Overview Deck (5-10 Slides)</h2>
+
+      <div class="deck-structure" style="background: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>Purpose</h3>
+        <p>High-level business value presentation for C-level executives and decision makers. Focus on outcomes, not features.</p>
+
+        <h3>Audience</h3>
+        <ul>
+          <li>CIO, CISO, CTO</li>
+          <li>VP of IT/Security</li>
+          <li>Business executives</li>
+        </ul>
+
+        <h3>Duration</h3>
+        <p>15-20 minutes presentation + 10 minutes Q&A</p>
+
+        <h3>Slide-by-Slide Breakdown</h3>
+
+        <h4>Slide 1: Title Slide</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Presentation title: "Okta Device Access: Modern Endpoint Security for [Company Name]"</li>
+          <li>Your name and title</li>
+          <li>Date</li>
+          <li>Optional: Their logo (builds rapport)</li>
+        </ul>
+
+        <h4>Slide 2: The Challenge</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Start with their specific pain points (discovered in previous conversations)</li>
+          <li>3-4 key challenges they face</li>
+          <li>Business impact of these challenges (cost, risk, productivity)</li>
+        </ul>
+        <p><strong>Example Content:</strong></p>
+        <ul>
+          <li>"Help desk overwhelmed with 500+ password reset tickets per month"</li>
+          <li>"Device endpoints lack MFA protection - growing security gap"</li>
+          <li>"Users manage multiple passwords - friction and security risk"</li>
+          <li>"Compliance requirements mandate stronger device authentication"</li>
+        </ul>
+        <p><strong>Talking Points:</strong></p>
+        <ul>
+          <li>Acknowledge you've heard these challenges from them</li>
+          <li>Quantify the impact where possible</li>
+          <li>Set up the "why now" urgency</li>
+        </ul>
+
+        <h4>Slide 3: The Solution - Okta Device Access</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>High-level description: "Modern authentication for Windows and macOS devices"</li>
+          <li>Key capabilities (3-4 bullets, outcomes-focused):
+            <ul>
+              <li>Multi-factor authentication at device login</li>
+              <li>Passwordless authentication with biometrics</li>
+              <li>Unified identity across devices and applications</li>
+              <li>Device trust and compliance verification</li>
+            </ul>
+          </li>
+          <li>Visual: Simple diagram showing user → device → apps flow</li>
+        </ul>
+        <p><strong>Talking Points:</strong></p>
+        <ul>
+          <li>Position as extension of their existing Okta investment (if applicable)</li>
+          <li>Emphasize "unified" and "modern" approach</li>
+          <li>Mention it works with their existing MDM</li>
+        </ul>
+
+        <h4>Slide 4: Business Value</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Three value pillars with metrics:
+            <ul>
+              <li><strong>Enhanced Security:</strong> Phishing-resistant MFA, device trust, reduced breach risk</li>
+              <li><strong>Improved User Experience:</strong> Single password or passwordless, faster logins, less friction</li>
+              <li><strong>Operational Efficiency:</strong> 50% reduction in password tickets, automated provisioning, centralized management</li>
+            </ul>
+          </li>
+          <li>Use icons/visuals for each pillar</li>
+        </ul>
+        <p><strong>Talking Points:</strong></p>
+        <ul>
+          <li>Connect each value point back to their stated challenges</li>
+          <li>Share specific customer metrics where relevant</li>
+          <li>Emphasize the "win-win" of security + user experience</li>
+        </ul>
+
+        <h4>Slide 5: ROI Summary</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Simple table or visual showing:
+            <ul>
+              <li>Help desk savings: $X per year</li>
+              <li>Productivity gains: $X per year</li>
+              <li>Security risk reduction: Quantified or qualitative</li>
+              <li>Total value: $X annually</li>
+            </ul>
+          </li>
+          <li>Payback period: 6-12 months</li>
+          <li>Note: "Based on [similar company size/industry] benchmarks"</li>
+        </ul>
+        <p><strong>Talking Points:</strong></p>
+        <ul>
+          <li>"These are conservative estimates based on industry benchmarks"</li>
+          <li>"We can build a custom model using your specific metrics"</li>
+          <li>Mention intangible benefits (compliance, reduced risk, employee satisfaction)</li>
+        </ul>
+
+        <h4>Slide 6: Proof - Customer Success</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>2-3 customer logos (similar industry/size if possible)</li>
+          <li>Brief case study highlights:
+            <ul>
+              <li>"[Healthcare company] deployed to 3,000 users in 8 weeks"</li>
+              <li>"Reduced password tickets by 65%"</li>
+              <li>"Achieved HIPAA compliance requirement for device MFA"</li>
+            </ul>
+          </li>
+          <li>Pull quote from customer if available</li>
+        </ul>
+        <p><strong>Talking Points:</strong></p>
+        <ul>
+          <li>Focus on relatable success stories</li>
+          <li>Offer to connect them with reference customers</li>
+          <li>Position as "proven" and "battle-tested"</li>
+        </ul>
+
+        <h4>Slide 7: How It Works (Optional Technical Slide)</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Simple 3-step process:
+            <ol>
+              <li>Deploy Okta Verify via MDM</li>
+              <li>Users enroll with Okta credentials</li>
+              <li>Authenticate at device login with MFA/biometrics</li>
+            </ol>
+          </li>
+          <li>Clean visual/diagram</li>
+          <li>Note: "No changes to Active Directory or domain controllers"</li>
+        </ul>
+        <p><strong>Talking Points:</strong></p>
+        <ul>
+          <li>"Implementation is straightforward"</li>
+          <li>"Leverages your existing infrastructure"</li>
+          <li>"We have a proven deployment methodology"</li>
+        </ul>
+
+        <h4>Slide 8: Implementation Roadmap</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>High-level timeline:
+            <ul>
+              <li>Week 1-2: Planning and configuration</li>
+              <li>Week 3-4: Pilot testing (20-50 users)</li>
+              <li>Week 5-12: Phased rollout to all users</li>
+              <li>Ongoing: Monitoring and optimization</li>
+            </ul>
+          </li>
+          <li>Gantt chart or timeline visual</li>
+        </ul>
+        <p><strong>Talking Points:</strong></p>
+        <ul>
+          <li>"Realistic timeline based on your organization size"</li>
+          <li>"Phased approach minimizes risk and allows learning"</li>
+          <li>"We'll be with you every step of the way"</li>
+        </ul>
+
+        <h4>Slide 9: Next Steps & Call to Action</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Clear recommended next steps:
+            <ol>
+              <li>Technical deep-dive with IT/security team</li>
+              <li>Proof of Concept (2-4 weeks)</li>
+              <li>Business case and ROI modeling</li>
+            </ol>
+          </li>
+          <li>Proposed timeline for next steps</li>
+          <li>Your contact information</li>
+        </ul>
+        <p><strong>Talking Points:</strong></p>
+        <ul>
+          <li>"What makes the most sense as a next step for [Company Name]?"</li>
+          <li>"I recommend starting with a POC to prove value in your environment"</li>
+          <li>"I'm here to support you through the evaluation process"</li>
+        </ul>
+
+        <h4>Slide 10: Q&A / Discussion</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Simple "Questions?" slide</li>
+          <li>Your contact info</li>
+        </ul>
+      </div>
+
+      <h2>2. Technical Architecture Deck (10-15 Slides)</h2>
+
+      <div class="deck-structure" style="background: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>Purpose</h3>
+        <p>Deep technical dive for IT architects, systems engineers, and security engineers. Focus on how it works, integration points, and technical requirements.</p>
+
+        <h3>Audience</h3>
+        <ul>
+          <li>IT Architects</li>
+          <li>Systems Engineers</li>
+          <li>Security Engineers</li>
+          <li>Desktop/Endpoint team</li>
+        </ul>
+
+        <h3>Duration</h3>
+        <p>30-45 minutes presentation + 15-30 minutes Q&A</p>
+
+        <h3>Key Slides to Include</h3>
+
+        <h4>Slide 1-2: Title & Agenda</h4>
+        <p>Set expectations for technical depth and topics to be covered.</p>
+
+        <h4>Slide 3: Current State Assessment</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Diagram of their current environment (based on discovery):
+            <ul>
+              <li>Identity provider (AD, Azure AD, Okta)</li>
+              <li>MDM solution (Jamf, Intune, Workspace ONE)</li>
+              <li>Device types and OS versions</li>
+              <li>Current authentication methods</li>
+            </ul>
+          </li>
+          <li>Pain points and gaps in current architecture</li>
+        </ul>
+
+        <h4>Slide 4: Future State Architecture</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Comprehensive architecture diagram showing:
+            <ul>
+              <li>Okta as identity provider</li>
+              <li>Okta Verify on endpoints</li>
+              <li>MDM integration</li>
+              <li>Directory integration (AD/Azure AD)</li>
+              <li>Cloud applications</li>
+              <li>On-prem applications (if applicable)</li>
+            </ul>
+          </li>
+          <li>Data flows and authentication sequences</li>
+        </ul>
+        <p><strong>Talking Points:</strong></p>
+        <ul>
+          <li>Walk through authentication flow step-by-step</li>
+          <li>Explain how components integrate</li>
+          <li>Address any questions about data residency, latency, etc.</li>
+        </ul>
+
+        <h4>Slide 5: Desktop MFA Technical Deep-Dive</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>How Desktop MFA works:
+            <ul>
+              <li>Credential Provider (Windows) / Authorization Plugin (macOS)</li>
+              <li>Okta Verify agent on device</li>
+              <li>Authentication policy evaluation</li>
+              <li>Factor prompts (push, biometric, etc.)</li>
+            </ul>
+          </li>
+          <li>Sequence diagram of login flow</li>
+          <li>Offline access capabilities</li>
+        </ul>
+
+        <h4>Slide 6: FastPass Passwordless (if applicable)</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>FastPass architecture and FIDO2/WebAuthn standards</li>
+          <li>Biometric authentication flow (Windows Hello, Touch ID, Face ID)</li>
+          <li>Public key cryptography overview</li>
+          <li>Phishing resistance explanation</li>
+        </ul>
+
+        <h4>Slide 7: MDM Integration</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>How Okta integrates with their specific MDM:
+            <ul>
+              <li>Configuration profiles</li>
+              <li>Policy deployment</li>
+              <li>Device compliance checks</li>
+              <li>Reporting integration</li>
+            </ul>
+          </li>
+          <li>Specific technical steps for [Jamf/Intune/etc.]</li>
+          <li>Example configurations/screenshots</li>
+        </ul>
+
+        <h4>Slide 8: Directory Integration</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>How Okta integrates with their directory:
+            <ul>
+              <li>AD: LDAP interface, AD connector, OU structure</li>
+              <li>Azure AD: Native integration, sync options</li>
+              <li>Hybrid: Best practices for hybrid environments</li>
+            </ul>
+          </li>
+          <li>User provisioning and deprovisioning flows</li>
+          <li>Group-based policy assignment</li>
+        </ul>
+
+        <h4>Slide 9: Security & Compliance</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Security architecture:
+            <ul>
+              <li>Encryption (in transit and at rest)</li>
+              <li>Certificate-based authentication</li>
+              <li>Key storage (TPM, Secure Enclave)</li>
+              <li>Zero trust principles</li>
+            </ul>
+          </li>
+          <li>Compliance certifications (SOC2, ISO 27001, FedRAMP, etc.)</li>
+          <li>Audit logging and reporting</li>
+        </ul>
+
+        <h4>Slide 10: Device Trust & Conditional Access</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Device trust signals:
+            <ul>
+              <li>Device registration status</li>
+              <li>Disk encryption (FileVault, BitLocker)</li>
+              <li>OS version compliance</li>
+              <li>Antivirus/EDR status</li>
+              <li>Jailbreak/root detection</li>
+            </ul>
+          </li>
+          <li>Policy examples: "Require managed device + disk encryption for access to sensitive apps"</li>
+        </ul>
+
+        <h4>Slide 11: Offline Access & Recovery</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Offline authentication capabilities:
+            <ul>
+              <li>Cached credential timeout</li>
+              <li>Grace period configuration</li>
+              <li>Biometric-based offline access</li>
+            </ul>
+          </li>
+          <li>Recovery scenarios:
+            <ul>
+              <li>Lost device</li>
+              <li>Lost phone (for MFA)</li>
+              <li>Locked out user</li>
+              <li>Help desk workflows</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h4>Slide 12: Deployment Technical Requirements</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Minimum OS versions (Windows 10+, macOS 11+)</li>
+          <li>Network requirements (ports, URLs to whitelist)</li>
+          <li>MDM requirements and versions</li>
+          <li>Active Directory/Azure AD requirements</li>
+          <li>Certificate requirements (if applicable)</li>
+          <li>Firewall/proxy considerations</li>
+        </ul>
+
+        <h4>Slide 13: Deployment Process & Timeline</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Detailed implementation phases:
+            <ul>
+              <li>Phase 1: Planning (1 week)
+                <ul>
+                  <li>Requirements gathering</li>
+                  <li>Architecture design</li>
+                  <li>Policy definition</li>
+                </ul>
+              </li>
+              <li>Phase 2: Configuration (1-2 weeks)
+                <ul>
+                  <li>Okta tenant configuration</li>
+                  <li>MDM profile creation</li>
+                  <li>Testing in lab environment</li>
+                </ul>
+              </li>
+              <li>Phase 3: Pilot (2-4 weeks)
+                <ul>
+                  <li>Deploy to 20-50 users</li>
+                  <li>Gather feedback</li>
+                  <li>Refine configuration</li>
+                </ul>
+              </li>
+              <li>Phase 4: Rollout (4-8 weeks)
+                <ul>
+                  <li>Phased deployment by group</li>
+                  <li>User communication</li>
+                  <li>Support monitoring</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+
+        <h4>Slide 14: Operations & Support</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Day 2 operations:
+            <ul>
+              <li>Monitoring and alerting</li>
+              <li>User provisioning automation</li>
+              <li>Policy updates and changes</li>
+              <li>Troubleshooting common issues</li>
+            </ul>
+          </li>
+          <li>Support model:
+            <ul>
+              <li>Okta support (24/7)</li>
+              <li>Documentation and knowledge base</li>
+              <li>Community resources</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h4>Slide 15: Q&A and Technical Discussion</h4>
+        <p>Leave ample time for technical questions and whiteboard discussions.</p>
+      </div>
+
+      <h2>3. Security Benefits Deck (8-12 Slides)</h2>
+
+      <div class="deck-structure" style="background: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>Purpose</h3>
+        <p>Security-focused presentation for CISOs and security teams. Emphasize threat mitigation, compliance, and risk reduction.</p>
+
+        <h3>Audience</h3>
+        <ul>
+          <li>CISO</li>
+          <li>Security architects</li>
+          <li>Compliance team</li>
+          <li>Risk management</li>
+        </ul>
+
+        <h3>Duration</h3>
+        <p>25-30 minutes presentation + 15-20 minutes Q&A</p>
+
+        <h3>Key Slides to Include</h3>
+
+        <h4>Slide 1-2: Title & Security Landscape</h4>
+        <p>Open with current threat landscape and endpoint security challenges.</p>
+
+        <h4>Slide 3: The Endpoint Security Gap</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Statistics on endpoint-based attacks:
+            <ul>
+              <li>70% of breaches start at the endpoint</li>
+              <li>Credential theft is #1 attack vector</li>
+              <li>Average cost of breach: $4.45M (IBM 2023)</li>
+            </ul>
+          </li>
+          <li>Diagram showing the gap: "You protect cloud apps with MFA, but what about the device itself?"</li>
+          <li>Real-world attack scenarios (phishing, stolen credentials, insider threat)</li>
+        </ul>
+
+        <h4>Slide 4: Threat Mitigation with Okta Device Access</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>How Okta Device Access mitigates specific threats:
+            <ul>
+              <li><strong>Credential Theft:</strong> MFA at device login prevents stolen passwords from being useful</li>
+              <li><strong>Phishing:</strong> FastPass is phishing-resistant (FIDO2/WebAuthn)</li>
+              <li><strong>Insider Threat:</strong> Device trust and continuous verification</li>
+              <li><strong>Ransomware:</strong> Prevent unauthorized device access</li>
+              <li><strong>Lost/Stolen Devices:</strong> Require MFA even if device is unlocked</li>
+            </ul>
+          </li>
+          <li>Use MITRE ATT&CK framework references if audience is sophisticated</li>
+        </ul>
+
+        <h4>Slide 5: Zero Trust Architecture</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>How Okta Device Access fits into zero trust model:
+            <ul>
+              <li>Verify explicitly (MFA always)</li>
+              <li>Least privileged access (device + user context)</li>
+              <li>Assume breach (continuous verification)</li>
+            </ul>
+          </li>
+          <li>Device trust as part of security posture</li>
+          <li>Integration with other zero trust controls (network, application, data)</li>
+        </ul>
+
+        <h4>Slide 6: Compliance & Regulatory Benefits</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>How Okta Device Access helps meet compliance requirements:
+            <ul>
+              <li><strong>HIPAA:</strong> Access controls (§164.312(a)(1)), audit logs (§164.312(b))</li>
+              <li><strong>SOC 2:</strong> Access control (CC6.1), logical security (CC6.6)</li>
+              <li><strong>PCI-DSS:</strong> MFA for non-console access (8.3)</li>
+              <li><strong>NIST CSF:</strong> Identity management and access control (PR.AC)</li>
+              <li><strong>CMMC:</strong> Multi-factor authentication (AC.2.016)</li>
+              <li><strong>GDPR:</strong> Security of processing (Article 32)</li>
+            </ul>
+          </li>
+          <li>Audit trail and reporting capabilities</li>
+        </ul>
+
+        <h4>Slide 7: Phishing-Resistant Authentication</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Why traditional MFA isn't enough (push fatigue, MFA bypass attacks)</li>
+          <li>How FastPass provides phishing resistance:
+            <ul>
+              <li>FIDO2/WebAuthn standards-based</li>
+              <li>Public key cryptography</li>
+              <li>Origin binding prevents man-in-the-middle</li>
+            </ul>
+          </li>
+          <li>Recent high-profile phishing attacks that bypassed traditional MFA</li>
+          <li>Executive order and government mandate trends toward phishing-resistant MFA</li>
+        </ul>
+
+        <h4>Slide 8: Device Trust & Context-Aware Policies</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Device trust signals Okta can evaluate:
+            <ul>
+              <li>Device managed by MDM</li>
+              <li>Disk encryption enabled</li>
+              <li>OS up to date</li>
+              <li>Antivirus/EDR running</li>
+              <li>Device location</li>
+              <li>Time of access</li>
+            </ul>
+          </li>
+          <li>Example policies:
+            <ul>
+              <li>"Only allow access to financial systems from managed, encrypted devices"</li>
+              <li>"Block access if device is jailbroken or rooted"</li>
+              <li>"Require additional MFA if accessing from unusual location"</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h4>Slide 9: Security Operations Benefits</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Enhanced visibility:
+            <ul>
+              <li>Centralized authentication logs</li>
+              <li>Device inventory and status</li>
+              <li>Failed authentication attempts</li>
+              <li>Anomaly detection</li>
+            </ul>
+          </li>
+          <li>Integration with SIEM/SOAR tools</li>
+          <li>Incident response capabilities (revoke access, force re-auth, lock device)</li>
+          <li>Audit trail for forensics</li>
+        </ul>
+
+        <h4>Slide 10: Risk Reduction & ROI</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Quantify security risk reduction:
+            <ul>
+              <li>Reduced likelihood of credential-based breaches</li>
+              <li>Faster incident detection and response</li>
+              <li>Decreased attack surface</li>
+            </ul>
+          </li>
+          <li>Cost avoidance:
+            <ul>
+              <li>Average breach cost: $4.45M</li>
+              <li>Even 10% risk reduction = $445K value</li>
+            </ul>
+          </li>
+          <li>Insurance and compliance benefits (lower premiums, easier audits)</li>
+        </ul>
+
+        <h4>Slide 11: Implementation Security Best Practices</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Security considerations during deployment:
+            <ul>
+              <li>Phased rollout for risk mitigation</li>
+              <li>Backup authentication methods</li>
+              <li>Security team involvement in policy design</li>
+              <li>Monitoring during rollout</li>
+            </ul>
+          </li>
+          <li>Long-term security hygiene:
+            <ul>
+              <li>Regular policy reviews</li>
+              <li>Stay current with Okta security updates</li>
+              <li>User security awareness training</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h4>Slide 12: Next Steps & Security Review</h4>
+        <p><strong>What to Include:</strong></p>
+        <ul>
+          <li>Offer security-specific next steps:
+            <ul>
+              <li>Security architecture review with your team</li>
+              <li>Compliance mapping workshop</li>
+              <li>POC with security testing scenarios</li>
+            </ul>
+          </li>
+          <li>Security resources: Whitepapers, certifications, penetration test results</li>
+        </ul>
+      </div>
+
+      <h2>Presentation Delivery Best Practices</h2>
+
+      <div class="best-practices" style="background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>Before the Presentation</h3>
+        <ul>
+          <li><strong>Know Your Audience:</strong> Research attendees on LinkedIn, understand their roles and priorities</li>
+          <li><strong>Customize Content:</strong> Never deliver a generic deck - tailor to their industry, challenges, and environment</li>
+          <li><strong>Practice:</strong> Rehearse at least once, especially for executive presentations</li>
+          <li><strong>Test Technology:</strong> Check screen sharing, demo environment, connectivity 30 minutes before</li>
+          <li><strong>Prepare Backup:</strong> Have PDF version ready in case of tech issues</li>
+          <li><strong>Set Expectations:</strong> Share agenda upfront, ask about time constraints</li>
+        </ul>
+
+        <h3>During the Presentation</h3>
+        <ul>
+          <li><strong>Start Strong:</strong> Begin with their challenges, not your company/product</li>
+          <li><strong>Tell Stories:</strong> Use customer examples and real-world scenarios, not just bullet points</li>
+          <li><strong>Be Concise:</strong> Executives appreciate brevity; technical folks want depth. Adjust accordingly.</li>
+          <li><strong>Visual > Text:</strong> Use diagrams, screenshots, and visuals. Avoid text-heavy slides.</li>
+          <li><strong>Pause for Questions:</strong> Invite questions throughout, don't wait until the end</li>
+          <li><strong>Read the Room:</strong> Watch for engagement signals. Speed up if they're bored, slow down if confused.</li>
+          <li><strong>Bridge to Demo:</strong> When possible, transition from slides to live demo to show real product</li>
+          <li><strong>Handle Objections:</strong> Address concerns with empathy and evidence, not defensiveness</li>
+        </ul>
+
+        <h3>After the Presentation</h3>
+        <ul>
+          <li><strong>Send Follow-up:</strong> Within 24 hours, send summary and next steps</li>
+          <li><strong>Share Deck:</strong> Provide PDF version (but remove confidential customer info)</li>
+          <li><strong>Include Resources:</strong> Add links to documentation, whitepapers, case studies</li>
+          <li><strong>Schedule Next Meeting:</strong> Try to book the next call before you hang up</li>
+          <li><strong>Internal Debrief:</strong> Document feedback, concerns, and key takeaways for the team</li>
+        </ul>
+      </div>
+
+      <h2>Customization Tips</h2>
+
+      <h3>Industry-Specific Customization</h3>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #e3f2fd;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Industry</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Key Talking Points</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Relevant Use Cases</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Healthcare</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">HIPAA compliance, patient privacy, shared workstations, fast user switching</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Clinical workstation access, EHR security, mobile clinician devices</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Financial Services</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">SOC 2, PCI-DSS, phishing-resistant MFA, zero trust, insider threat</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Trader workstations, remote banking, privileged access</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Education</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Student data protection (FERPA), shared lab computers, budget constraints</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Computer lab security, faculty/staff devices, student privacy</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Retail</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">POS security, shift workers, minimal friction, seasonal workforce</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Store POS systems, back-office devices, distribution centers</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;"><strong>Technology</strong></td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Modern security, developer experience, API integration, rapid deployment</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">Developer workstations, contractor access, BYOD</td>
+        </tr>
+      </table>
+
+      <h3>Persona-Specific Customization</h3>
+
+      <ul>
+        <li><strong>For CIOs:</strong> Focus on digital transformation, user experience, operational efficiency, total cost of ownership</li>
+        <li><strong>For CISOs:</strong> Emphasize threat mitigation, zero trust, compliance, risk reduction, security operations</li>
+        <li><strong>For IT Directors:</strong> Highlight ease of deployment, integration with existing tools, help desk reduction, manageability</li>
+        <li><strong>For Architects:</strong> Deep-dive on technical architecture, integration patterns, scalability, API capabilities</li>
+        <li><strong>For End User Computing Teams:</strong> Focus on user experience, device management integration, pilot success, rollout strategy</li>
+      </ul>
+
+      <h3>Company Size Customization</h3>
+
+      <ul>
+        <li><strong>SMB (< 500 users):</strong> Emphasize simplicity, quick time-to-value, SaaS model (no infrastructure), affordable pricing</li>
+        <li><strong>Mid-Market (500-2000):</strong> Balance of sophistication and ease, phased approach, proven methodology, reference customers</li>
+        <li><strong>Enterprise (2000+):</strong> Scalability, global deployment, integration with complex environments, enterprise support, strategic partnership</li>
+      </ul>
+
+      <div class="tips" style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>Pro Tips for Great Presentations</h3>
+        <ul>
+          <li><strong>Use Their Terminology:</strong> If they call it "endpoint" vs "device", match their language</li>
+          <li><strong>Show, Don't Tell:</strong> One demo is worth a thousand slides</li>
+          <li><strong>Quantify Everything:</strong> Turn qualitative benefits into quantitative metrics whenever possible</li>
+          <li><strong>Create Urgency:</strong> Tie to business initiatives, compliance deadlines, or upcoming projects</li>
+          <li><strong>Leave Room for Discovery:</strong> Don't pack slides so tight there's no time for conversation</li>
+          <li><strong>End with Clear CTA:</strong> Never end a presentation without a clear next step</li>
+          <li><strong>Build Champions:</strong> Identify and empower internal advocates who can champion the project</li>
+        </ul>
+      </div>
+    `,
+    tags: ['sales-tools', 'presentations', 'decks', 'executive-summary', 'technical-architecture', 'security', 'delivery-best-practices'],
+    source: 'internal',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isRead: false,
+    isStarter: true,
+  },
+  {
+    id: 'se-shared-devices-scenario',
+    title: 'Advanced Scenario: Shared Device Environments',
+    content: `
+      <h2>Overview</h2>
+      <p>Shared device environments present unique challenges for identity and access management. This guide provides detailed strategies for implementing Okta Device Access in shared workstation scenarios across different industries.</p>
+
+      <h2>Healthcare Shared Workstations</h2>
+
+      <h3>Environment Characteristics</h3>
+      <ul>
+        <li><strong>Clinical workflows:</strong> Nurses, physicians, and staff share workstations on wheels (WOWs)</li>
+        <li><strong>HIPAA requirements:</strong> Individual accountability for all PHI access</li>
+        <li><strong>Fast user switching:</strong> Users need to switch quickly between patients</li>
+        <li><strong>24/7 operations:</strong> Cannot disrupt patient care for maintenance</li>
+        <li><strong>Mobility:</strong> Devices move between rooms, floors, and buildings</li>
+      </ul>
+
+      <h3>Technical Configuration</h3>
+      <ul>
+        <li><strong>Desktop MFA policy:</strong> Require MFA for all users, no grace periods on shared devices</li>
+        <li><strong>Factor selection:</strong> Okta Verify Push (fastest for clinicians with phones) + TOTP backup</li>
+        <li><strong>Session management:</strong> Auto-logout after 5-15 minutes of inactivity</li>
+        <li><strong>Fast user switching:</strong> Configure Windows/macOS to allow quick switch without full logout</li>
+        <li><strong>Offline support:</strong> Enable offline factors for areas with poor connectivity</li>
+      </ul>
+
+      <h3>User Experience Optimization</h3>
+      <ul>
+        <li><strong>Login speed:</strong> Optimize for <5 second authentication</li>
+        <li><strong>QR code alternative:</strong> Provide TOTP for users without phones</li>
+        <li><strong>Visual cues:</strong> Clear indication of which user is logged in</li>
+        <li><strong>Training:</strong> 2-minute quick-start video on entering patient rooms</li>
+        <li><strong>Support availability:</strong> 24/7 help desk coverage for clinical staff</li>
+      </ul>
+
+      <h3>Implementation Guide</h3>
+      <ol>
+        <li><strong>Week 1-2:</strong> Pilot with IT-friendly clinical unit (e.g., outpatient clinic)</li>
+        <li><strong>Week 3-4:</strong> Gather feedback, adjust session timeouts based on workflow observation</li>
+        <li><strong>Week 5-8:</strong> Phased rollout by department (ICU, Med-Surg, ED, etc.)</li>
+        <li><strong>Week 9-12:</strong> Complete deployment, ongoing optimization</li>
+      </ol>
+
+      <h3>Success Metrics</h3>
+      <ul>
+        <li>100% individual accountability (no shared accounts)</li>
+        <li>Zero HIPAA audit findings related to device access</li>
+        <li>Login time <10 seconds (target <5 seconds)</li>
+        <li>User satisfaction >80% (measured post-rollout)</li>
+        <li>Help desk tickets <2% of user base per month</li>
+      </ul>
+
+      <h2>Retail POS Systems</h2>
+
+      <h3>Environment Characteristics</h3>
+      <ul>
+        <li><strong>Multi-shift workers:</strong> Cashiers, supervisors, managers share terminals</li>
+        <li><strong>Minimal friction:</strong> Fast login critical for customer service</li>
+        <li><strong>Audit requirements:</strong> Track who processed each transaction</li>
+        <li><strong>High turnover:</strong> Frequent onboarding/offboarding</li>
+        <li><strong>Peak periods:</strong> Cannot slow down during rushes</li>
+      </ul>
+
+      <h3>Technical Configuration</h3>
+      <ul>
+        <li><strong>Desktop MFA policy:</strong> MFA required, but optimize for speed</li>
+        <li><strong>Factor selection:</strong> Okta Verify Push or TOTP (numeric codes easy to enter)</li>
+        <li><strong>Shared device tags:</strong> Tag devices as "shared-retail-pos" for specific policies</li>
+        <li><strong>Session timeouts:</strong> Short timeouts (2-5 min) for security, auto-lock at register</li>
+        <li><strong>Biometric option:</strong> Consider Windows Hello fingerprint for speed</li>
+      </ul>
+
+      <h3>User Experience Optimization</h3>
+      <ul>
+        <li><strong>Numeric focus:</strong> TOTP codes easier than typing usernames</li>
+        <li><strong>Barcode badges:</strong> Scan badge to populate username</li>
+        <li><strong>Visual consistency:</strong> Same login experience across all terminals</li>
+        <li><strong>Manager override:</strong> Supervisor can unlock for emergency customer service</li>
+        <li><strong>Simple training:</strong> 30-second demonstration during onboarding</li>
+      </ul>
+
+      <h3>Implementation Guide</h3>
+      <ol>
+        <li><strong>Week 1:</strong> Pilot with one store (preferably lower-traffic location)</li>
+        <li><strong>Week 2:</strong> Monitor peak period performance, adjust configurations</li>
+        <li><strong>Week 3-6:</strong> Roll out to additional stores in waves</li>
+        <li><strong>Week 7-8:</strong> Complete deployment across all locations</li>
+      </ol>
+
+      <h3>Success Metrics</h3>
+      <ul>
+        <li>Login time <8 seconds (faster than old password system)</li>
+        <li>Zero transaction attribution errors</li>
+        <li>Reduced fraudulent transactions (better accountability)</li>
+        <li>PCI compliance for all device access</li>
+      </ul>
+
+      <h2>Manufacturing Floor Devices</h2>
+
+      <h3>Environment Characteristics</h3>
+      <ul>
+        <li><strong>Harsh environments:</strong> Dust, heat, gloves, loud noise</li>
+        <li><strong>Limited training:</strong> Workers may have basic computer skills</li>
+        <li><strong>Shift changes:</strong> Multiple workers per device per day</li>
+        <li><strong>Production tracking:</strong> Link work output to individual workers</li>
+        <li><strong>Safety considerations:</strong> Quick lockout for safety compliance</li>
+      </ul>
+
+      <h3>Technical Configuration</h3>
+      <ul>
+        <li><strong>Simplified MFA:</strong> TOTP or PIN-based (gloves make phone use difficult)</li>
+        <li><strong>Hardened devices:</strong> Industrial PCs or tablets with enhanced durability</li>
+        <li><strong>Proximity cards:</strong> Badge tap + PIN for two factors</li>
+        <li><strong>Session management:</strong> Auto-lock when worker moves to different station</li>
+        <li><strong>Offline mode:</strong> Full offline support for network outages</li>
+      </ul>
+
+      <h3>User Experience Optimization</h3>
+      <ul>
+        <li><strong>Large UI elements:</strong> Easy to tap with gloves</li>
+        <li><strong>Visual feedback:</strong> Clear success/failure indicators</li>
+        <li><strong>Language support:</strong> Multi-language options for diverse workforce</li>
+        <li><strong>Audio cues:</strong> Beeps for success/failure (loud environment)</li>
+        <li><strong>Supervisor assist:</strong> Floor managers can help with issues</li>
+      </ul>
+
+      <h3>Implementation Guide</h3>
+      <ol>
+        <li><strong>Week 1-2:</strong> Pilot with administrative area (less harsh environment)</li>
+        <li><strong>Week 3-4:</strong> Test on production floor with one line/area</li>
+        <li><strong>Week 5-6:</strong> Gather feedback, adjust for glove use and noise</li>
+        <li><strong>Week 7-12:</strong> Phased rollout across production areas</li>
+      </ol>
+
+      <h3>Success Metrics</h3>
+      <ul>
+        <li>100% production line accountability</li>
+        <li>Login time <15 seconds (acceptable for shift changes)</li>
+        <li>Zero safety incidents related to authentication delays</li>
+        <li>Reduced quality issues (better worker tracking)</li>
+      </ul>
+
+      <h2>Call Center Shared Desks</h2>
+
+      <h3>Environment Characteristics</h3>
+      <ul>
+        <li><strong>High turnover:</strong> Frequent new hires and departures</li>
+        <li><strong>Session management:</strong> Agents take breaks, need quick lock/unlock</li>
+        <li><strong>Performance metrics:</strong> Track individual call handling, quality scores</li>
+        <li><strong>Hoteling:</strong> Different desk each day</li>
+        <li><strong>Call volume:</strong> Cannot delay customer calls for auth issues</li>
+      </ul>
+
+      <h3>Technical Configuration</h3>
+      <ul>
+        <li><strong>Desktop MFA:</strong> Fast factors only (Push, TOTP)</li>
+        <li><strong>Session timeout:</strong> 5-10 minutes for break scenarios</li>
+        <li><strong>Single sign-on:</strong> Device login also authenticates to call center apps</li>
+        <li><strong>Quick unlock:</strong> Passwordless unlock for returning from breaks</li>
+        <li><strong>Device assignment:</strong> No device binding (hoteling)</li>
+      </ul>
+
+      <h3>User Experience Optimization</h3>
+      <ul>
+        <li><strong>Predictable experience:</strong> Same at every desk</li>
+        <li><strong>Break optimization:</strong> Lock but maintain session for quick return</li>
+        <li><strong>Onboarding integration:</strong> Factor enrollment during new hire orientation</li>
+        <li><strong>Minimal clicks:</strong> One-click to ready state</li>
+        <li><strong>Help desk proximity:</strong> IT support desk on floor for issues</li>
+      </ul>
+
+      <h3>Implementation Guide</h3>
+      <ol>
+        <li><strong>Week 1:</strong> Pilot with training team (controlled environment)</li>
+        <li><strong>Week 2-3:</strong> Pilot with small production team</li>
+        <li><strong>Week 4-6:</strong> Rollout by team/shift</li>
+        <li><strong>Week 7-8:</strong> Complete deployment</li>
+      </ol>
+
+      <h3>Success Metrics</h3>
+      <ul>
+        <li>No impact to average handle time (AHT)</li>
+        <li>Individual agent accountability for all calls</li>
+        <li>Reduced fraudulent activity (better attribution)</li>
+        <li>User satisfaction >75% (call center baseline lower)</li>
+      </ul>
+
+      <h2>General Best Practices for Shared Devices</h2>
+
+      <h3>Security Considerations</h3>
+      <ul>
+        <li>Never use shared accounts - always individual authentication</li>
+        <li>Implement automatic session timeouts appropriate for environment</li>
+        <li>Audit all device access - integrate with SIEM/compliance systems</li>
+        <li>Use device-appropriate factors (consider gloves, noise, etc.)</li>
+        <li>Monitor for anomalous patterns (same user on multiple devices simultaneously)</li>
+      </ul>
+
+      <h3>User Experience Guidelines</h3>
+      <ul>
+        <li>Optimize for speed - every second counts in production environments</li>
+        <li>Provide visual and audio feedback for environments</li>
+        <li>Support multiple languages if needed</li>
+        <li>Make training minimal and practical</li>
+        <li>Ensure consistent experience across all shared devices</li>
+      </ul>
+
+      <h3>Technical Configuration Tips</h3>
+      <ul>
+        <li>Tag shared devices in MDM for specific policies</li>
+        <li>Configure appropriate session timeouts by device type</li>
+        <li>Enable offline factors for network-challenged areas</li>
+        <li>Test thoroughly during actual work shifts (not after-hours)</li>
+        <li>Monitor authentication metrics to identify friction points</li>
+      </ul>
+
+      <h3>Change Management Approach</h3>
+      <ul>
+        <li>Involve frontline workers in pilot selection and feedback</li>
+        <li>Communicate business benefits (security, compliance) clearly</li>
+        <li>Provide supervisor/manager override for emergencies</li>
+        <li>Ensure 24/7 support coverage if devices operate 24/7</li>
+        <li>Measure and communicate success metrics to workforce</li>
+      </ul>
+    `,
+    summary: 'Comprehensive guide for implementing Okta Device Access in shared device environments including healthcare workstations, retail POS, manufacturing floor devices, and call center desks with specific configurations, best practices, and success metrics for each scenario.',
+    category: 'use-cases',
+    tags: ['shared devices', 'healthcare', 'retail', 'manufacturing', 'call center', 'implementation', 'user experience', 'session management'],
+    source: 'internal',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isRead: false,
+    isStarter: true,
+  },
+  {
+    id: 'se-vdi-scenario',
+    title: 'Advanced Scenario: VDI and Virtual Desktop Environments',
+    content: `
+      <h2>Overview</h2>
+      <p>Virtual Desktop Infrastructure (VDI) and virtual desktop environments present unique challenges for device authentication and identity management. This guide covers implementation strategies for major VDI platforms.</p>
+
+      <h2>Citrix Virtual Apps and Desktops</h2>
+
+      <h3>Environment Overview</h3>
+      <ul>
+        <li><strong>Published applications:</strong> RemoteApp-style individual app delivery</li>
+        <li><strong>Full desktop:</strong> Complete Windows desktop experience</li>
+        <li><strong>HDX protocol:</strong> Citrix's display protocol for remote sessions</li>
+        <li><strong>Delivery controller:</strong> Citrix infrastructure component that brokers connections</li>
+        <li><strong>StoreFront/Workspace:</strong> User portal for accessing virtual resources</li>
+      </ul>
+
+      <h3>Technical Considerations</h3>
+      <ul>
+        <li><strong>Authentication layers:</strong> Client device → Citrix Gateway → VDA (Virtual Delivery Agent)</li>
+        <li><strong>Device registration:</strong> Register VDA or client device to Okta</li>
+        <li><strong>Okta Verify placement:</strong> Install on client device, not in VDA</li>
+        <li><strong>SSO integration:</strong> SAML federation between Okta and Citrix Workspace</li>
+        <li><strong>Session handling:</strong> Persistent vs non-persistent VDA considerations</li>
+      </ul>
+
+      <h3>Recommended Architecture</h3>
+      <ul>
+        <li><strong>Client-side authentication:</strong> Desktop MFA on physical endpoint, not VDA</li>
+        <li><strong>SSO to Citrix:</strong> User authenticates to device → SSO into Citrix Workspace → launch apps</li>
+        <li><strong>Okta as IdP:</strong> Federate Citrix Gateway/Workspace with Okta SAML</li>
+        <li><strong>Factor selection:</strong> Okta Verify on physical device (phone or client PC)</li>
+        <li><strong>Policy enforcement:</strong> Device trust on physical endpoint, not virtual desktop</li>
+      </ul>
+
+      <h3>Implementation Steps</h3>
+      <ol>
+        <li><strong>Configure Okta-Citrix SAML federation</strong> (Citrix as SP, Okta as IdP)</li>
+        <li><strong>Deploy Okta Verify to client devices</strong> (physical endpoints accessing Citrix)</li>
+        <li><strong>Configure Desktop MFA on client devices</strong> (not VDA)</li>
+        <li><strong>Test authentication flow:</strong> Device login → Citrix Workspace SSO → app launch</li>
+        <li><strong>Configure policies:</strong> Require device trust for Citrix access</li>
+      </ol>
+
+      <h3>Common Pitfalls</h3>
+      <ul>
+        <li>Installing Okta Verify inside VDA (won't persist in non-persistent pools)</li>
+        <li>Trying to enforce Desktop MFA on VDA login (not supported)</li>
+        <li>Not federating Citrix Workspace with Okta (duplicating authentication)</li>
+        <li>Incorrect StoreFront/Workspace SAML configuration</li>
+      </ul>
+
+      <h2>VMware Horizon</h2>
+
+      <h3>Environment Overview</h3>
+      <ul>
+        <li><strong>Instant clones:</strong> Non-persistent desktops created on-demand</li>
+        <li><strong>Linked clones:</strong> Pool of desktops based on parent image</li>
+        <li><strong>Full clones:</strong> Independent, persistent virtual machines</li>
+        <li><strong>Blast protocol:</strong> VMware's display protocol (HTML5 or native)</li>
+        <li><strong>Connection Server:</strong> Horizon component that brokers desktop connections</li>
+      </ul>
+
+      <h3>Technical Considerations</h3>
+      <ul>
+        <li><strong>Persistent vs non-persistent:</strong> Affects where Okta Verify can be installed</li>
+        <li><strong>Profile management:</strong> FSLogix, VMware Dynamic Environment Manager for user state</li>
+        <li><strong>Authentication tiers:</strong> Client device → Horizon → Windows desktop</li>
+        <li><strong>True SSO:</strong> VMware's certificate-based SSO to Windows</li>
+        <li><strong>Smart card support:</strong> Physical smart cards through USB redirection</li>
+      </ul>
+
+      <h3>Recommended Architecture</h3>
+      <ul>
+        <li><strong>Client-side Desktop MFA:</strong> Authenticate on physical endpoint</li>
+        <li><strong>Okta + Workspace ONE:</strong> Integrate with VMware Workspace ONE for unified access</li>
+        <li><strong>SAML to Horizon:</strong> Federate Horizon Connection Server with Okta</li>
+        <li><strong>True SSO configuration:</strong> Automatic Windows login after Horizon authentication</li>
+        <li><strong>Persistent desktop option:</strong> For users needing Okta Verify in VDI, use full clones</li>
+      </ul>
+
+      <h3>Implementation Steps</h3>
+      <ol>
+        <li><strong>Deploy Desktop MFA to client devices</strong> (physical endpoints)</li>
+        <li><strong>Configure Okta-Horizon SAML federation</strong></li>
+        <li><strong>Enable VMware True SSO</strong> (eliminates second Windows login)</li>
+        <li><strong>Configure authentication policies</strong> (device trust on physical endpoint)</li>
+        <li><strong>Test end-to-end flow:</strong> Physical device login → Horizon portal → desktop launch</li>
+      </ol>
+
+      <h3>Non-Persistent Desktop Handling</h3>
+      <ul>
+        <li><strong>Challenge:</strong> Instant clones reset on logoff, losing Okta Verify enrollment</li>
+        <li><strong>Solution:</strong> Don't install Okta Verify in VDI; authenticate at client device layer</li>
+        <li><strong>Alternative:</strong> Use persistent desktops (full clones) for users requiring in-VDI Okta Verify</li>
+        <li><strong>Profile redirection:</strong> FSLogix can persist some Okta Verify data, but not recommended</li>
+      </ul>
+
+      <h2>Azure Virtual Desktop (AVD)</h2>
+
+      <h3>Environment Overview</h3>
+      <ul>
+        <li><strong>Windows 10/11 multi-session:</strong> Multiple users on same OS instance</li>
+        <li><strong>FSLogix:</strong> Profile container technology for user state</li>
+        <li><strong>Personal desktops:</strong> 1:1 user-to-VM assignment</li>
+        <li><strong>Pooled desktops:</strong> Shared, non-persistent VMs</li>
+        <li><strong>RemoteApp:</strong> Individual application streaming</li>
+      </ul>
+
+      <h3>Technical Considerations</h3>
+      <ul>
+        <li><strong>Azure AD join:</strong> AVD VMs can be Azure AD joined or hybrid joined</li>
+        <li><strong>Conditional Access:</strong> Integrate with Azure AD Conditional Access</li>
+        <li><strong>Multi-session OS:</strong> Windows 10/11 Enterprise multi-session support</li>
+        <li><strong>FSLogix profiles:</strong> User profiles stored in Azure Files or NetApp</li>
+        <li><strong>Client authentication:</strong> Windows, macOS, iOS, Android, web clients</li>
+      </ul>
+
+      <h3>Recommended Architecture</h3>
+      <ul>
+        <li><strong>Hybrid identity:</strong> Okta federates with Azure AD, AVD uses Azure AD</li>
+        <li><strong>Client-side Desktop MFA:</strong> On physical endpoint accessing AVD</li>
+        <li><strong>AVD SSO:</strong> Single sign-on from client to AVD desktop</li>
+        <li><strong>Conditional Access integration:</strong> Okta device trust feeds Azure AD policies</li>
+        <li><strong>Personal desktops for special cases:</strong> Users needing persistent Okta Verify in VDI</li>
+      </ul>
+
+      <h3>Implementation Steps</h3>
+      <ol>
+        <li><strong>Configure Okta-Azure AD federation</strong> (SAML or OIDC)</li>
+        <li><strong>Deploy Desktop MFA to client devices</strong></li>
+        <li><strong>Enable AVD SSO</strong> (Azure AD join + SSO settings)</li>
+        <li><strong>Configure Conditional Access</strong> (require compliant device for AVD access)</li>
+        <li><strong>Test authentication:</strong> Client login → AVD portal → desktop/app launch</li>
+      </ol>
+
+      <h3>FSLogix Considerations</h3>
+      <ul>
+        <li><strong>Profile containers:</strong> Store user data, but not recommended for Okta Verify</li>
+        <li><strong>Office containers:</strong> Separate container for Office 365 cache</li>
+        <li><strong>Cloud Cache:</strong> Multi-location profile redundancy</li>
+        <li><strong>Okta Verify challenges:</strong> Device binding may not survive profile container moves</li>
+      </ul>
+
+      <h2>Amazon WorkSpaces</h2>
+
+      <h3>Environment Overview</h3>
+      <ul>
+        <li><strong>Persistent WorkSpaces:</strong> Dedicated virtual desktop per user</li>
+        <li><strong>Non-persistent pools:</strong> Auto-provisioned, destroyed after use</li>
+        <li><strong>Client applications:</strong> Windows, macOS, iOS, Android, web clients</li>
+        <li><strong>Directory integration:</strong> AWS Managed Microsoft AD or AD Connector</li>
+        <li><strong>SAML 2.0 support:</strong> Can federate with external IdPs</li>
+      </ul>
+
+      <h3>Technical Considerations</h3>
+      <ul>
+        <li><strong>Registration code:</strong> WorkSpaces uses registration codes for client setup</li>
+        <li><strong>MFA at directory level:</strong> AWS supports RADIUS-based MFA</li>
+        <li><strong>SAML federation:</strong> Can federate WorkSpaces access with Okta</li>
+        <li><strong>Persistent vs AlwaysOn:</strong> Different lifecycle models</li>
+        <li><strong>Client device trust:</strong> Limited visibility into client device state</li>
+      </ul>
+
+      <h3>Recommended Architecture</h3>
+      <ul>
+        <li><strong>Client-side Desktop MFA:</strong> Physical endpoint authentication</li>
+        <li><strong>SAML to WorkSpaces:</strong> Federate WorkSpaces web access with Okta</li>
+        <li><strong>AD Connector to Okta:</strong> Sync users from Okta to AWS Managed AD</li>
+        <li><strong>Persistent WorkSpaces:</strong> For users requiring Okta Verify in-VDI</li>
+        <li><strong>Client registration:</strong> Manage WorkSpaces client via MDM</li>
+      </ul>
+
+      <h3>Implementation Steps</h3>
+      <ol>
+        <li><strong>Configure Okta-WorkSpaces SAML federation</strong></li>
+        <li><strong>Deploy Desktop MFA to client devices</strong></li>
+        <li><strong>Set up AWS Managed AD</strong> (sync users from Okta if needed)</li>
+        <li><strong>Configure WorkSpaces directory</strong> (enable SAML if using web access)</li>
+        <li><strong>Test flow:</strong> Client device login → WorkSpaces client/web → desktop launch</li>
+      </ol>
+
+      <h2>General VDI Best Practices</h2>
+
+      <h3>Architecture Principles</h3>
+      <ul>
+        <li><strong>Authenticate at the edge:</strong> Secure physical endpoints, not virtual desktops</li>
+        <li><strong>Use SSO:</strong> Single authentication should flow through to VDI</li>
+        <li><strong>Device trust on endpoints:</strong> Register physical devices, not VDI instances</li>
+        <li><strong>Factor placement:</strong> Okta Verify on physical device or phone, not VDI</li>
+        <li><strong>Persistent for exceptions:</strong> Use persistent VDI only when truly needed</li>
+      </ul>
+
+      <h3>Common Questions and Answers</h3>
+      <ul>
+        <li><strong>Q: Can I use Desktop MFA inside VDI?</strong><br>A: Not recommended. Non-persistent VDI resets on logoff. Use Desktop MFA on client devices instead.</li>
+        <li><strong>Q: What about Okta Verify in persistent VDI?</strong><br>A: Possible with full clones/persistent desktops, but adds complexity. Better to authenticate at client layer.</li>
+        <li><strong>Q: How do I handle offline VDI access?</strong><br>A: Offline VDI access typically requires VPN or cached credentials. Configure offline factors on client device.</li>
+        <li><strong>Q: Can I use Platform SSO in VDI?</strong><br>A: Platform SSO is for physical macOS devices, not applicable to VDI sessions.</li>
+        <li><strong>Q: What about thin clients?</strong><br>A: Deploy Desktop MFA on thin client OS if supported (IGEL, HP ThinPro), otherwise use SAML to VDI broker.</li>
+      </ul>
+
+      <h3>Licensing Considerations</h3>
+      <ul>
+        <li><strong>Device licensing:</strong> License physical endpoints accessing VDI, not VDI instances</li>
+        <li><strong>User licensing:</strong> Per-user licensing simplifies VDI scenarios</li>
+        <li><strong>Persistent VDI:</strong> If registering VDI instances, each counts as a device</li>
+        <li><strong>Thin clients:</strong> Thin clients running Okta Verify count as devices</li>
+      </ul>
+
+      <h3>Troubleshooting VDI Issues</h3>
+      <ul>
+        <li><strong>Issue: Okta Verify lost after VDI logoff</strong><br>Solution: Don't install in non-persistent VDI; use client-side authentication</li>
+        <li><strong>Issue: Double authentication (device + VDI)</strong><br>Solution: Configure SSO from client to VDI broker with SAML federation</li>
+        <li><strong>Issue: Slow authentication to VDI</strong><br>Solution: Check network latency, optimize connection broker placement, enable protocol acceleration</li>
+        <li><strong>Issue: Factor not available in VDI</strong><br>Solution: Ensure factors configured for client device, not VDI session</li>
+      </ul>
+
+      <h2>Implementation Decision Tree</h2>
+
+      <h3>When to use Client-Side Desktop MFA</h3>
+      <ul>
+        <li>Non-persistent VDI (instant clones, pooled desktops)</li>
+        <li>Multi-session environments (AVD, RDSH)</li>
+        <li>Primarily accessing published apps (not full desktops)</li>
+        <li>Thin client infrastructure</li>
+        <li>Want to avoid complexity of VDI-side authentication</li>
+      </ul>
+
+      <h3>When to use VDI-Side Desktop MFA</h3>
+      <ul>
+        <li>Persistent, full-clone VDI (1:1 user-to-VM)</li>
+        <li>Users have dedicated virtual desktops</li>
+        <li>VDI IS the primary "device" for users (no physical endpoint control)</li>
+        <li>Strong requirement for in-VDI MFA (regulatory, policy)</li>
+        <li>Willing to manage complexity of VDI enrollment lifecycle</li>
+      </ul>
+
+      <h3>When to use SAML Federation Only</h3>
+      <ul>
+        <li>Web-based VDI access (HTML5 clients)</li>
+        <li>No control over client devices (BYOD, contractor-owned)</li>
+        <li>Want simple, lightweight authentication</li>
+        <li>Don't need device trust signals</li>
+        <li>Primary concern is SSO into VDI environment</li>
+      </ul>
+    `,
+    summary: 'Comprehensive guide for implementing Okta Device Access in VDI and virtual desktop environments including Citrix, VMware Horizon, Azure Virtual Desktop, and Amazon WorkSpaces with architecture patterns, best practices, and troubleshooting.',
+    category: 'use-cases',
+    tags: ['vdi', 'virtual desktop', 'citrix', 'vmware', 'azure virtual desktop', 'workspaces', 'architecture', 'implementation'],
+    source: 'internal',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isRead: false,
+    isStarter: true,
+  },
 ];
 
 export const starterDiagrams: Diagram[] = [
